@@ -73,8 +73,6 @@ jobs:
       SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # "version: git" reads the tag
       - uses: snapcore/action-build@v1
         id: build
       - uses: actions/upload-artifact@v4

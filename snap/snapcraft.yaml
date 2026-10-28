@@ -1,7 +1,7 @@
 name: candle-writer
 title: Candle
 base: core24
-version: git
+adopt-info: candle   # version comes from candle/__init__.py
 summary: Plan and write your novel
 description: |
   Candle is a novel-writing tool inspired by bibisco. Plan your story's
@@ -30,6 +30,9 @@ parts:
   candle:
     plugin: python
     source: .
+    override-pull: |
+      craftctl default
+      craftctl set version="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' candle/__init__.py)"
     stage-packages:
       # Needed by Qt's X11 backend (used when Wayland isn't available).
       - libxcb-cursor0
