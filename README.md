@@ -37,8 +37,11 @@ from a folder.
 
 ### macOS (Apple Silicon)
 
-1. Download `Candle-<version>-macos-arm64.dmg` from the
-   [latest release](https://github.com/lmtrarbach/candle/releases/latest).
+New macOS builds are paused for now. Version 0.1.1 is available, or you can run
+the latest version [from source](#from-source).
+
+1. Download `Candle-0.1.1-macos-arm64.dmg` from
+   [release v0.1.1](https://github.com/lmtrarbach/candle/releases/tag/v0.1.1).
 2. Open it and drag **Candle** into **Applications**.
 3. The first time, macOS says Candle "can't be verified", because it isn't
    signed with a paid Apple certificate. Open **System Settings → Privacy &
@@ -154,7 +157,7 @@ To change the icon, edit `candle/resources/candle.svg` and run
 |---|---|---|
 | Linux | `.snap`, published to the Snap Store | `snap/snapcraft.yaml` |
 | Windows | installer `.exe` + portable `.zip` | `packaging/candle.spec` (PyInstaller) + `packaging/candle.iss` (Inno Setup) |
-| macOS (Apple Silicon) | `.dmg` containing `Candle.app` | `packaging/candle.spec` + `hdiutil` |
+| macOS (Apple Silicon), *paused* | `.dmg` containing `Candle.app` | `packaging/candle.spec` + `hdiutil`; re-enable the `macos` job in the workflow |
 | Microsoft Store | `.msix` (signed by Microsoft on submission) | `packaging/msix/AppxManifest.xml` + `makeappx` |
 
 To release, bump `__version__` in `candle/__init__.py`, then tag and push:

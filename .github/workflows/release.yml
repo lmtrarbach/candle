@@ -64,6 +64,9 @@ jobs:
           path: dist/*.msix
 
   macos:
+    # Paused for now: delete the next line (and add macos back to the release
+    # job's needs and files) to build the macOS .dmg again.
+    if: false
     needs: test
     runs-on: macos-latest   # Apple Silicon
     steps:
@@ -107,7 +110,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [windows, macos, snap]
+    needs: [windows, snap]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -119,6 +122,5 @@ jobs:
         with:
           files: |
             artifacts/windows/*
-            artifacts/macos/*
             artifacts/snap/*
           generate_release_notes: true
