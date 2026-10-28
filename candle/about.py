@@ -33,8 +33,9 @@ class AboutDialog(QDialog):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         intro = QLabel(
-            "<p><b>Candle is free and open source.</b> It costs nothing, has no ads and no "
-            "accounts, and your novels stay on your own computer.</p>"
+            "<p><b>Candle is free and open source.</b> It costs nothing, has no ads, needs no "
+            "account, and your novels stay on your own computer. (Optional Candle Premium "
+            "adds cloud backup for those who sign in.)</p>"
             f"<p>It is inspired by <a href='{BIBISCO_URL}'>bibisco</a>, the novel-writing "
             "software, and follows its way of working: architecture, characters, locations, "
             "strands, chapters and scenes.</p>"

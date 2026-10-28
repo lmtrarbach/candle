@@ -23,6 +23,8 @@ apps:
     plugs:
       - home
       - removable-media
+      - network          # only used after signing in to Candle Premium
+      - network-bind     # signing in: the browser hands the session back on 127.0.0.1
     environment:
       QT_QPA_PLATFORM: "wayland;xcb"
 

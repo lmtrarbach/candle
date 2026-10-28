@@ -1,16 +1,19 @@
 import datetime
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, QStandardPaths, Qt, QTimer
+from PySide6.QtCore import QSettings, QStandardPaths, Qt, QThreadPool, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QKeySequence, QPalette, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QFileDialog, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem,
     QMainWindow, QMessageBox, QPushButton, QStackedWidget, QStyleFactory, QVBoxLayout, QWidget,
 )
 
-from . import __version__
+from . import __version__, cloud
 from .about import AboutDialog
+from .account import AccountDialog, PremiumDialog, RestoreDialog, SignInDialog, run_async
 from .db import Project
 from .views.chapters import ChaptersView
 from .views.entities import CharactersView, LocationsView, ObjectsView
@@ -154,6 +157,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.settings = QSettings(APP_NAME, APP_NAME)
         self.project = None
+        self.session = self._load_session()
+        self._cloud_busy = False
         self.focus_mode = False
         self.full_view = False
         self._was_maximized = False
@@ -222,6 +227,11 @@ class MainWindow(QMainWindow):
         self.autosave.timeout.connect(self.flush)
         self.autosave.start(30_000)
 
+        # Candle Premium: back up to the cloud every hour while a project is open.
+        self.cloud_timer = QTimer(self)
+        self.cloud_timer.timeout.connect(lambda: self.cloud_backup(quiet=True))
+        self.cloud_timer.start(60 * 60_000)
+
         self._show_welcome()
 
     # -- menus ------------------------------------------------------------
@@ -262,6 +272,11 @@ class MainWindow(QMainWindow):
             act.triggered.connect(lambda _=False, k=key: self.set_theme(k))
             group.addAction(act)
             theme_menu.addAction(act)
+
+        if cloud.configured():
+            self.account_menu = bar.addMenu("&Account")
+            self.account_menu.aboutToShow.connect(self._fill_account_menu)
+            self._fill_account_menu()
 
         help_ = bar.addMenu("&Help")
         help_.addAction("&Keyboard shortcuts", self._shortcuts)
@@ -342,6 +357,7 @@ class MainWindow(QMainWindow):
         self.nav.setCurrentRow(2)
         self.update_status()
         self._refresh_recent()
+        self.cloud_backup(quiet=True)
 
     def close_project(self):
         if self.project is None:
@@ -393,6 +409,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.close_project()
+        # Let a cloud upload that's under way finish.
+        QThreadPool.globalInstance().waitForDone(15_000)
         event.accept()
 
     def backup_dir(self):
@@ -409,9 +427,104 @@ class MainWindow(QMainWindow):
         if self.project is None:
             return
         self.flush()
-        dialog = ExportDialog(self.project, self)
+        dialog = ExportDialog(self.project, self, self.session)
         if dialog.exec():
             self.statusBar().showMessage(f"Exported to {dialog.exported_path}", 8000)
+
+    # -- Candle Premium ---------------------------------------------------
+    def _load_session(self):
+        token = self.settings.value("cloud/refresh_token")
+        if not (cloud.configured() and token):
+            return None
+        return cloud.Session(self.settings.value("cloud/email", ""), token)
+
+    def _fill_account_menu(self):
+        menu = self.account_menu
+        menu.clear()
+        if self.session is None:
+            menu.addAction("&Sign in or create account…", self.sign_in)
+            menu.addAction("Candle &Premium…", self.show_premium)
+            return
+        menu.addAction(f"Signed in as {self.session.email}").setEnabled(False)
+        menu.addAction("&Back up to cloud now", self.cloud_backup).setEnabled(self.project is not None)
+        menu.addAction("&Restore from cloud…", self.restore_from_cloud)
+        menu.addSeparator()
+        menu.addAction("Candle &Premium…", self.show_premium)
+        menu.addAction("&Account…", self.show_account)
+        menu.addAction("Sign &out", self.sign_out)
+
+    def sign_in(self):
+        dialog = SignInDialog(self)
+        if not dialog.exec() or dialog.session is None:
+            return
+        self.session = dialog.session
+        self.settings.setValue("cloud/email", self.session.email)
+        self.settings.setValue("cloud/refresh_token", self.session.refresh_token)
+        self.statusBar().showMessage(f"Signed in as {self.session.email}", 6000)
+        self.cloud_backup(quiet=True)
+
+    def sign_out(self):
+        self.session = None
+        self.settings.remove("cloud")
+
+    def show_premium(self):
+        dialog = PremiumDialog(self.session, self)
+        dialog.exec()
+        if dialog.wants_sign_in:
+            self.sign_in()
+            if self.session is not None:
+                self.show_premium()   # now with the buttons to buy it
+
+    def show_account(self):
+        dialog = AccountDialog(self.session, self)
+        dialog.signed_out.connect(self.sign_out)
+        dialog.exec()
+
+    def cloud_backup(self, quiet=False):
+        if self.project is None or self.session is None or self._cloud_busy:
+            return
+        self.flush()
+        project_id = self.project.cloud_id()   # before the snapshot, so copies keep it
+        folder = Path(tempfile.mkdtemp(prefix="candle-upload-"))
+        snapshot = self.project.snapshot(folder / "project.candle")
+        title, session = self.project.title, self.session
+        self._cloud_busy = True
+        if not quiet:
+            self.statusBar().showMessage("Backing up to the cloud…")
+
+        def upload():
+            try:
+                return session.upload(project_id, title, snapshot)
+            finally:
+                shutil.rmtree(folder, ignore_errors=True)
+
+        def done(_):
+            self._cloud_busy = False
+            self.statusBar().showMessage("Backed up to the cloud ✓", 6000)
+
+        def failed(exc):
+            self._cloud_busy = False
+            self._cloud_failed(exc, quiet)
+
+        run_async(upload, done, failed)
+
+    def _cloud_failed(self, exc, quiet):
+        if getattr(exc, "session_ended", False):
+            self.sign_out()
+            QMessageBox.information(self, "Signed out", f"{exc}\n\nUse Account → Sign in to continue.")
+        elif quiet and getattr(exc, "status", 0) in (402, 403):
+            pass   # not Premium, or email not confirmed yet: Account… explains
+        elif quiet:
+            self.statusBar().showMessage(f"Cloud backup failed: {str(exc).splitlines()[0]}", 8000)
+        else:
+            self.statusBar().clearMessage()
+            QMessageBox.warning(self, "Cloud backup", str(exc))
+
+    def restore_from_cloud(self):
+        folder = self.settings.value("last_dir", str(Path.home() / "Documents"))
+        dialog = RestoreDialog(self.session, folder, self)
+        if dialog.exec() and dialog.restored_path:
+            self.open_project(dialog.restored_path)
 
     # -- navigation -------------------------------------------------------
     def _navigate(self, row):

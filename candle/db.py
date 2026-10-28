@@ -4,6 +4,7 @@ import datetime
 import os
 import re
 import sqlite3
+import uuid
 from pathlib import Path
 
 SCHEMA = """
@@ -336,16 +337,28 @@ class Project:
         return self.total_words() - row[0]
 
     # -- backups ----------------------------------------------------------
-    def backup(self, directory, keep=10):
-        directory = Path(directory)
-        directory.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        target = directory / f"{self.path.stem}-{stamp}.candle"
+    def snapshot(self, target):
+        """Write a consistent copy of the whole project to `target`."""
         dest = sqlite3.connect(str(target))
         try:
             self.conn.backup(dest)
         finally:
             dest.close()
+        return Path(target)
+
+    def cloud_id(self):
+        """Stable id that ties this project to its cloud backups."""
+        value = self.get_meta("cloud_id")
+        if not value:
+            value = uuid.uuid4().hex
+            self.set_meta("cloud_id", value)
+        return value
+
+    def backup(self, directory, keep=10):
+        directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        target = self.snapshot(directory / f"{self.path.stem}-{stamp}.candle")
         old = sorted(directory.glob(f"{self.path.stem}-*.candle"))
         for stale in old[:-keep]:
             stale.unlink()
