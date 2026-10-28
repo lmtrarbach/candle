@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 
-from .. import export
+from .. import cloud, export, kdp
 from ..questions import ARCHITECTURE_SECTIONS
 from ..widgets import Debouncer, RichEditor, heading, hbox
 from .base import View
@@ -365,13 +365,31 @@ class AnalysisView(View):
 
 
 class ExportDialog(QDialog):
-    def __init__(self, project, parent=None):
+    KDP_LABEL = "Amazon KDP paperback (.pdf) — Premium"
+
+    def __init__(self, project, parent=None, session=None):
         super().__init__(parent)
         self.project = project
+        self.session = session
         self.setWindowTitle("Export manuscript")
         self.format = QComboBox()
         for label, ext in export.FORMATS.items():
             self.format.addItem(label, ext)
+        if cloud.configured():   # Premium only exists where the service does
+            self.format.addItem(self.KDP_LABEL, "kdp")
+        self.trim = QComboBox()
+        self.trim.addItems(kdp.TRIM_SIZES)
+        self.trim.setCurrentText(kdp.DEFAULT_TRIM)
+        self.paper = QComboBox()
+        self.paper.addItems(kdp.PAPERS)
+        self.font_size = QSpinBox()
+        self.font_size.setRange(9, 14)
+        self.font_size.setValue(11)
+        self.font_size.setSuffix(" pt")
+        self.kdp_note = QLabel("A print-ready interior: margins and gutter sized for KDP, chapters "
+                               "opening on right-hand pages, fonts embedded. No bleed.")
+        self.kdp_note.setObjectName("hint")
+        self.kdp_note.setWordWrap(True)
         self.title_page = QCheckBox("Title page")
         self.chapter_titles = QCheckBox("Chapter titles")
         self.number = QCheckBox("Number chapters")
@@ -389,26 +407,101 @@ class ExportDialog(QDialog):
         form.addRow("", self.chapter_titles)
         form.addRow("", self.number)
         form.addRow("", self.only_done)
+        self.kdp_rows = [("Trim size", self.trim), ("Paper", self.paper), ("Font size", self.font_size),
+                         ("", self.kdp_note)]
+        for label, widget in self.kdp_rows:
+            form.addRow(label, widget)
         form.addRow(buttons)
+        self.form, self.go = form, go
+        self.format.currentIndexChanged.connect(self._format_changed)
+        self._format_changed()
+
+    def _format_changed(self):
+        on = self.format.currentData() == "kdp"
+        for _, widget in self.kdp_rows:
+            self.form.setRowVisible(widget, on)
+        self.adjustSize()
+
+    def _options(self):
+        return export.Options(
+            chapter_titles=self.chapter_titles.isChecked(),
+            number_chapters=self.number.isChecked(),
+            title_page=self.title_page.isChecked(),
+            only_done=self.only_done.isChecked(),
+        )
 
     def _export(self):
         ext = self.format.currentData()
+        if ext == "kdp":
+            self._check_premium()
+            return
         default = str(self.project.path.with_suffix(f".{ext}"))
         path, _ = QFileDialog.getSaveFileName(self, "Export manuscript", default, f"*.{ext}")
         if not path:
             return
         if not path.endswith(f".{ext}"):
             path += f".{ext}"
-        options = export.Options(
-            chapter_titles=self.chapter_titles.isChecked(),
-            number_chapters=self.number.isChecked(),
-            title_page=self.title_page.isChecked(),
-            only_done=self.only_done.isChecked(),
-        )
+        options = self._options()
         try:
             export.export(self.project, path, ext, options)
         except Exception as exc:  # show any failure to the writer rather than crash
             QMessageBox.critical(self, "Export failed", str(exc))
             return
+        self.exported_path = path
+        self.accept()
+
+    # -- Amazon KDP (Candle Premium) ------------------------------------------
+    def _check_premium(self):
+        if self.session is None:
+            QMessageBox.information(
+                self, "Candle Premium",
+                "Print-ready KDP files are part of <b>Candle Premium</b>.<br><br>"
+                "Sign in under <b>Account → Sign in…</b>, then get Premium in <b>Account → Account…</b>.")
+            return
+        from ..account import run_async
+        self.go.setEnabled(False)
+        self.go.setText("Checking your account…")
+
+        def checked(me):
+            self.go.setEnabled(True)
+            self.go.setText("Export…")
+            if me.get("premium"):
+                self._export_kdp()
+            else:
+                QMessageBox.information(
+                    self, "Candle Premium",
+                    "Print-ready KDP files are part of <b>Candle Premium</b>. "
+                    "Get it in <b>Account → Account…</b>.")
+
+        def failed(exc):
+            self.go.setEnabled(True)
+            self.go.setText("Export…")
+            QMessageBox.warning(self, "Candle Premium", f"Couldn't check your account.\n\n{exc}")
+
+        run_async(self.session.me, checked, failed)
+
+    def _export_kdp(self):
+        default = str(self.project.path.with_name(self.project.path.stem + " - KDP interior.pdf"))
+        path, _ = QFileDialog.getSaveFileName(self, "Export KDP paperback interior", default, "*.pdf")
+        if not path:
+            return
+        if not path.endswith(".pdf"):
+            path += ".pdf"
+        layout = kdp.Layout(trim=self.trim.currentText(), paper=self.paper.currentText(),
+                            font_size=self.font_size.value())
+        try:
+            result = kdp.write_kdp_pdf(self.project, path, self._options(), layout)
+        except Exception as exc:  # show any failure to the writer rather than crash
+            QMessageBox.critical(self, "Export failed", str(exc))
+            return
+        trim = layout.trim.split(" (")[0]
+        notes = "".join(f"<br><br>⚠ {w}" for w in result.warnings)
+        QMessageBox.information(
+            self, "KDP interior ready",
+            f"<b>{result.pages} pages</b>, {trim}, inside margin {result.inside:g} in.<br><br>"
+            f"When you upload it to KDP, choose:<br>"
+            f"• Trim size: <b>{trim}</b><br>• Bleed: <b>No bleed</b><br>"
+            f"• Paper: <b>{layout.paper.split()[0]}</b><br><br>"
+            f"Order a proof copy before publishing.{notes}")
         self.exported_path = path
         self.accept()

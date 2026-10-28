@@ -21,7 +21,7 @@ a = Analysis(
     [str(ROOT / "packaging" / "launch.py")],
     pathex=[str(ROOT)],
     datas=[(str(ROOT / "candle" / "resources"), "candle/resources")],
-    hiddenimports=["docx"],
+    hiddenimports=["docx", "typst"],
     excludes=EXCLUDES,
 )
 # python-docx ships an unpacked copy of its template (it only uses default.docx).

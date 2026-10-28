@@ -8,7 +8,8 @@ planning and writing novels on Linux, Windows and macOS. It is inspired by
 characters, locations and plot lines, then write it chapter by chapter, scene
 by scene.
 
-No accounts, no ads, no cloud. Your novels stay on your computer.
+No ads, no account needed. Your novels stay on your computer, unless you choose
+optional [Candle Premium](#candle-premium-optional) cloud backup.
 
 ## Install
 
@@ -108,6 +109,38 @@ choose where it lives, and Candle saves as you type. Each time you open a
 project, Candle also writes a timestamped backup and keeps the last 10 per
 project. **Help → About Candle** shows the backup folder on your system.
 
+## Candle Premium (optional)
+
+Candle itself is free. **Candle Premium** is an optional subscription,
+**US$4 a month or US$36 a year**, that adds cloud backup and print-ready
+Amazon KDP paperback files. **Account → Candle Premium…** explains it and
+opens a secure Stripe checkout page; **Manage subscription…** lets you switch
+plans, change your card or cancel at any time. Payments are handled by
+Stripe; Candle never sees your card details.
+
+Signing in happens in your browser: **Account → Sign in or create account…**
+opens a Candle page where you continue with Google or with an email and
+password, then hands you back to the app.
+
+- Each project is backed up when you open it, every hour while it's open, and
+  whenever you choose **Account → Back up to cloud now**. The latest 20 backups
+  of each project are kept.
+- **Account → Restore from cloud…** saves any backup as a new `.candle` file;
+  it never overwrites a file.
+- Backups sit in a private folder only your account can open. Deleting your
+  account deletes them all.
+- **Print-ready KDP paperbacks:** **File → Export manuscript… → Amazon KDP
+  paperback** makes a PDF interior for any of KDP's 16 paperback trim sizes:
+  the gutter grows with the page count as KDP requires, margins mirror on left
+  and right pages, chapters open on right-hand pages with running heads and
+  page numbers, and fonts are embedded. Upload it with **No bleed** and order
+  a proof copy before publishing. The book is laid out on your computer; it is
+  never uploaded.
+
+Without an account, Candle never connects to the internet. The service behind
+this (a small API on Google Cloud Run, with backups in Cloud Storage) lives in
+its own repository.
+
 ## Support Candle
 
 Candle is free and open source, and always will be. If it helps you write,
@@ -138,6 +171,8 @@ python3 -m venv .venv
 candle/
   app.py          main window, menus, themes, full view and focus mode, recent files
   about.py        About window and donation addresses
+  account.py      Candle Premium windows: sign in, account, restore from cloud
+  cloud.py        Candle Premium client: sign-in tokens and cloud backup calls
   db.py           project storage (SQLite schema and queries)
   richtext.py     editor HTML → clean paragraph model (used by export and paste)
   export.py       md / html / txt / odt / pdf / docx / epub writers
