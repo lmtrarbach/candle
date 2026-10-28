@@ -12,10 +12,6 @@ No accounts, no ads, no cloud. Your novels stay on your computer.
 
 ## Install
 
-> **Note:** The first release is on its way. Until it is out, the Snap Store,
-> Windows and macOS downloads below won't work yet. Use
-> [From source](#from-source) in the meantime.
-
 ### Linux (Snap)
 
 ```bash
@@ -163,7 +159,7 @@ To change the icon, edit `candle/resources/candle.svg` and run
 To release, bump `__version__` in `candle/__init__.py`, then tag and push:
 
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
+git tag v0.1.1 && git push origin v0.1.1
 ```
 
 `.github/workflows/release.yml` then runs the tests, builds all three platforms
