@@ -46,8 +46,9 @@ class TextEdit(QTextEdit):
         self.column = TEXT_COLUMN
 
     def resizeEvent(self, event):
-        super().resizeEvent(event)
+        # Margins first, so the text is laid out for the narrowed viewport.
         self.update_margins()
+        super().resizeEvent(event)
 
     def update_margins(self):
         margin = max(0, (self.width() - self.column) // 2)

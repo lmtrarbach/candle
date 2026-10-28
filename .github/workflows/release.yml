@@ -44,6 +44,24 @@ jobs:
           path: |
             dist/*-setup.exe
             dist/*-portable.zip
+      - name: Microsoft Store package (MSIX; Microsoft signs it on submission)
+        shell: pwsh
+        run: |
+          $version = python -c "import candle; print(candle.__version__)"
+          $makeappx = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\makeappx.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          New-Item -ItemType Directory msix | Out-Null
+          Copy-Item -Recurse dist\Candle\* msix\
+          Copy-Item -Recurse packaging\msix\Assets msix\Assets
+          (Get-Content packaging\msix\AppxManifest.xml -Raw).Replace('{VERSION}', "$version.0") |
+            Set-Content msix\AppxManifest.xml -Encoding utf8
+          & $makeappx.FullName pack /d msix /p "dist\Candle-$version-store.msix" /o
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # Upload this one to Partner Center by hand; it isn't installable on its own.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: microsoft-store
+          path: dist/*.msix
 
   macos:
     needs: test
@@ -99,5 +117,8 @@ jobs:
           path: artifacts
       - uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: |
+            artifacts/windows/*
+            artifacts/macos/*
+            artifacts/snap/*
           generate_release_notes: true

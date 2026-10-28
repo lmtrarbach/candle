@@ -155,6 +155,7 @@ To change the icon, edit `candle/resources/candle.svg` and run
 | Linux | `.snap`, published to the Snap Store | `snap/snapcraft.yaml` |
 | Windows | installer `.exe` + portable `.zip` | `packaging/candle.spec` (PyInstaller) + `packaging/candle.iss` (Inno Setup) |
 | macOS (Apple Silicon) | `.dmg` containing `Candle.app` | `packaging/candle.spec` + `hdiutil` |
+| Microsoft Store | `.msix` (signed by Microsoft on submission) | `packaging/msix/AppxManifest.xml` + `makeappx` |
 
 To release, bump `__version__` in `candle/__init__.py`, then tag and push:
 
@@ -164,7 +165,10 @@ git tag v0.1.1 && git push origin v0.1.1
 
 `.github/workflows/release.yml` then runs the tests, builds all three platforms
 on GitHub's machines, creates a GitHub release with the files, and publishes
-the snap to the Snap Store's stable channel.
+the snap to the Snap Store's stable channel. The `.msix` for the Microsoft
+Store is attached to the workflow run (not the release), to upload in Partner
+Center. Store text, screenshots and the privacy policy are in `packaging/store/`
+and `PRIVACY.md`.
 
 ### Publishing the snap (one-time setup)
 
