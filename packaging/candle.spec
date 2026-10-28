@@ -24,6 +24,9 @@ a = Analysis(
     hiddenimports=["docx"],
     excludes=EXCLUDES,
 )
+# python-docx ships an unpacked copy of its template (it only uses default.docx).
+# That copy contains "[Content_Types].xml", a name MSIX reserves, so leave it out.
+a.datas = [d for d in a.datas if "default-docx-template" not in d[0]]
 pyz = PYZ(a.pure)
 
 exe = EXE(
