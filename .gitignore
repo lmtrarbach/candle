@@ -8,3 +8,4 @@ build/
 *.candle
 *.candle-wal
 *.candle-shm
+snap-login.txt

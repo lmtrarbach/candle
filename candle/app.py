@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import __version__
+from .about import AboutDialog
 from .db import Project
 from .views.chapters import ChaptersView
 from .views.entities import CharactersView, LocationsView, ObjectsView
@@ -125,6 +126,13 @@ class WelcomePage(QWidget):
         v.addSpacing(24)
         v.addWidget(self.recent_label)
         v.addWidget(self.recent)
+        v.addSpacing(24)
+        free = QLabel("Candle is free and open source, inspired by bibisco. "
+                      "<a href='about'>About &amp; donations</a>")
+        free.setObjectName("hint")
+        free.setWordWrap(True)
+        free.linkActivated.connect(lambda _: window.show_about())
+        v.addWidget(free)
         outer = QVBoxLayout(self)
         outer.addStretch(1)
         outer.addWidget(inner, 0, Qt.AlignmentFlag.AlignHCenter)
@@ -146,6 +154,7 @@ class MainWindow(QMainWindow):
         self.settings = QSettings(APP_NAME, APP_NAME)
         self.project = None
         self.focus_mode = False
+        self.full_view = False
         self._was_maximized = False
         self.resize(1280, 820)
 
@@ -173,6 +182,7 @@ class MainWindow(QMainWindow):
 
         self.project_view = self.views[0][1]
         self.chapters_view = self.views[2][1]
+        self.chapters_view.full_view_requested.connect(self.toggle_full_view)
         self.project_view.export_requested.connect(self.export)
         self.project_view.backup_requested.connect(self.backup_now)
         for _, view in self.views:
@@ -220,8 +230,12 @@ class MainWindow(QMainWindow):
         file.addAction("&Quit", QKeySequence.StandardKey.Quit, self.close)
 
         view = bar.addMenu("&View")
+        self.full_view_action = view.addAction("F&ull view", QKeySequence("Ctrl+Shift+F"), self.toggle_full_view)
+        self.full_view_action.setCheckable(True)
         self.focus_action = view.addAction("&Focus mode", QKeySequence("F11"), self.toggle_focus)
-        self.project_actions.append(self.focus_action)
+        # Also attach to the window, so the shortcuts keep working while the menu bar is hidden.
+        self.addActions([self.full_view_action, self.focus_action])
+        self.project_actions += [self.full_view_action, self.focus_action]
         view.addSeparator()
         for i, (name, _) in enumerate(self.views):
             act = view.addAction(name, QKeySequence(f"Ctrl+{i + 1}"), lambda i=i: self.nav.setCurrentRow(i))
@@ -239,7 +253,8 @@ class MainWindow(QMainWindow):
 
         help_ = bar.addMenu("&Help")
         help_.addAction("&Keyboard shortcuts", self._shortcuts)
-        help_.addAction(f"&About {APP_NAME}", self._about)
+        help_.addAction("&Support Candle ♥", self.show_about)
+        help_.addAction(f"&About {APP_NAME}", self.show_about)
 
     def set_theme(self, key):
         self.settings.setValue("theme", key)
@@ -318,8 +333,7 @@ class MainWindow(QMainWindow):
     def close_project(self):
         if self.project is None:
             return
-        if self.focus_mode:
-            self.toggle_focus()
+        self.leave_expanded_views()
         self.flush()
         for _, view in self.views:
             view.set_project(None)
@@ -367,6 +381,8 @@ class MainWindow(QMainWindow):
     def _navigate(self, row):
         if row < 0 or self.project is None:
             return
+        if self.pages.currentWidget() is self.chapters_view and self.views[row][1] is not self.chapters_view:
+            self.leave_expanded_views()
         for _, view in self.views:
             view.flush()
         self.pages.setCurrentIndex(row)
@@ -386,39 +402,68 @@ class MainWindow(QMainWindow):
         self.words_label.setText(f"{p.total_words():,} words  ·  {today_text}  ")
         self.setWindowTitle(f"{p.title} — {APP_NAME}")
 
-    # -- focus mode -------------------------------------------------------
+    # -- full view and focus mode -----------------------------------------
+    # Full view: the scene editor fills the window (side panels hidden).
+    # Focus mode: full screen, with only the text visible.
+    def _can_expand(self, mode_name):
+        if self.pages.currentWidget() is self.chapters_view and self.chapters_view.has_open_scene():
+            return True
+        self.statusBar().showMessage(f"Open a scene in Chapters to use {mode_name}.", 4000)
+        return False
+
+    def _apply_view(self):
+        self.nav.setVisible(not (self.full_view or self.focus_mode))
+        self.menuBar().setVisible(not self.focus_mode)
+        self.statusBar().setVisible(not self.focus_mode)
+        self.chapters_view.set_view(self.full_view, self.focus_mode)
+        self.full_view_action.setChecked(self.full_view)
+        if self.full_view or self.focus_mode:
+            self.chapters_view.scene_panel.editor.edit.setFocus()
+
+    def toggle_full_view(self):
+        if self.project is None or self.focus_mode:
+            return
+        if not self.full_view and not self._can_expand("full view"):
+            self._apply_view()   # undo the button's own check state
+            return
+        self.full_view = not self.full_view
+        self._apply_view()
+
     def toggle_focus(self):
         if self.project is None:
             return
         if not self.focus_mode:
-            if self.pages.currentWidget() is not self.chapters_view or not self.chapters_view.scene_panel.scene_id:
-                self.statusBar().showMessage("Open a scene in Chapters to use focus mode.", 4000)
+            if not self._can_expand("focus mode"):
                 return
             self._was_maximized = self.isMaximized()
         self.focus_mode = not self.focus_mode
-        on = self.focus_mode
-        self.nav.setVisible(not on)
-        self.menuBar().setVisible(not on)
-        self.statusBar().setVisible(not on)
-        self.chapters_view.set_focus_mode(on)
-        if on:
+        self._apply_view()
+        if self.focus_mode:
             self.showFullScreen()
-            self.chapters_view.scene_panel.editor.edit.setFocus()
         elif self._was_maximized:
             self.showMaximized()
         else:
             self.showNormal()
 
+    def leave_expanded_views(self):
+        if self.focus_mode:
+            self.toggle_focus()
+        if self.full_view:
+            self.toggle_full_view()
+
     def _escape(self):
         if self.focus_mode:
             self.toggle_focus()
+        elif self.full_view:
+            self.toggle_full_view()
 
     # -- help -------------------------------------------------------------
     def _shortcuts(self):
         mod = "Cmd" if sys.platform == "darwin" else "Ctrl"
         QMessageBox.information(self, "Keyboard shortcuts", """
 <table cellpadding=3>
-<tr><td><b>F11</b></td><td>Focus mode (Esc to leave)</td></tr>
+<tr><td><b>Ctrl+Shift+F</b></td><td>Full view: the text fills the window (Esc to leave)</td></tr>
+<tr><td><b>F11</b></td><td>Focus mode: full screen, text only (Esc to leave)</td></tr>
 <tr><td><b>Ctrl+1 … Ctrl+8</b></td><td>Switch section</td></tr>
 <tr><td><b>Ctrl+B / I / U</b></td><td>Bold / italic / underline</td></tr>
 <tr><td><b>Ctrl+Shift+X</b></td><td>Strikethrough</td></tr>
@@ -428,13 +473,8 @@ class MainWindow(QMainWindow):
 <tr><td><b>Ctrl+Shift+E</b></td><td>Export manuscript</td></tr>
 </table>""".replace("Ctrl", mod))
 
-    def _about(self):
-        QMessageBox.about(self, f"About {APP_NAME}", f"""
-<h2>{APP_NAME} {__version__}</h2>
-<p>A novel-writing tool for Linux, inspired by bibisco.</p>
-<p>Each project is a single <code>.candle</code> file (SQLite). Your work is saved
-automatically, and a backup is made every time you open a project:<br>
-<code>{self.backup_dir()}</code></p>""")
+    def show_about(self):
+        AboutDialog(ICON, self.backup_dir(), self).exec()
 
 
 def resolve_theme(app, key):

@@ -79,6 +79,7 @@ class ChapterPanel(QWidget):
 
 class ScenePanel(QWidget):
     changed = Signal(int)       # scene id; label/words/status may have changed
+    full_view_clicked = Signal()
 
     def __init__(self):
         super().__init__()
@@ -99,7 +100,10 @@ class ScenePanel(QWidget):
         self.details_btn.setCheckable(True)
         self.details_btn.setChecked(True)
         self.details_btn.toggled.connect(self._toggle_details)
-        self.header = hbox(self.title, self.status, self.details_btn)
+        self.full_btn = QPushButton()
+        self.full_btn.setCheckable(True)
+        self.full_btn.clicked.connect(self.full_view_clicked)
+        self.header = hbox(self.title, self.status, self.details_btn, self.full_btn)
         self.header.layout().setStretch(0, 1)
 
         # Editor
@@ -157,6 +161,7 @@ class ScenePanel(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(self.header)
         layout.addWidget(self.splitter, 1)
+        self.set_view()
 
     def load(self, project, scene_id):
         self.project, self.scene_id = project, scene_id
@@ -222,10 +227,16 @@ class ScenePanel(QWidget):
             self.load(self.project, self.scene_id)
             self.changed.emit(self.scene_id)
 
-    def set_focus_mode(self, on):
-        self.header.setVisible(not on)
-        self.details.setVisible(not on and self.details_btn.isChecked())
-        self.editor.toolbar.setVisible(not on)
+    def set_view(self, full=False, focus=False):
+        """full: editor fills the window; focus: also hide header and toolbar."""
+        self.header.setVisible(not focus)
+        self.editor.toolbar.setVisible(not focus)
+        self.details_btn.setVisible(not full)
+        self.details.setVisible(not (full or focus) and self.details_btn.isChecked())
+        self.full_btn.setChecked(full)
+        self.full_btn.setText("Exit full view" if full else "Full view")
+        self.full_btn.setToolTip(("Show the side panels again" if full else
+                                  "Give the whole window to the text") + "  (Ctrl+Shift+F)")
 
 
 class RevisionsDialog(QDialog):
@@ -294,6 +305,8 @@ class RevisionsDialog(QDialog):
 
 
 class ChaptersView(View):
+    full_view_requested = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -331,6 +344,7 @@ class ChaptersView(View):
         self.chapter_panel.renamed.connect(self._refresh_chapter)
         self.scene_panel = ScenePanel()
         self.scene_panel.changed.connect(self._scene_changed)
+        self.scene_panel.full_view_clicked.connect(self.full_view_requested)
         empty = QLabel("Select a chapter or scene, or create a new one.")
         empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         empty.setObjectName("hint")
@@ -563,6 +577,9 @@ class ChaptersView(View):
             self.scene_panel.status.setCurrentIndex(self.scene_panel.status.findData(status))
         self._scene_changed(scene_id)
 
-    def set_focus_mode(self, on):
-        self.left.setVisible(not on)
-        self.scene_panel.set_focus_mode(on)
+    def has_open_scene(self):
+        return self.stack.currentWidget() is self.scene_panel and self.scene_panel.scene_id is not None
+
+    def set_view(self, full=False, focus=False):
+        self.left.setVisible(not (full or focus))
+        self.scene_panel.set_view(full, focus)

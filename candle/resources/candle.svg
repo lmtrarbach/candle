@@ -1,26 +1,53 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
   <defs>
-    <radialGradient id="glow" cx="128" cy="84" r="74" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffd27a" stop-opacity="0.85"/>
+    <radialGradient id="glow" cx="80" cy="78" r="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd27a" stop-opacity="0.8"/>
       <stop offset="1" stop-color="#ffd27a" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#352c26"/>
+      <stop offset="1" stop-color="#1f1a17"/>
+    </linearGradient>
     <linearGradient id="wax" x1="0" x2="1">
-      <stop offset="0" stop-color="#f6ecd9"/>
+      <stop offset="0" stop-color="#fbf3e2"/>
       <stop offset="0.6" stop-color="#efe1c4"/>
-      <stop offset="1" stop-color="#d9c6a1"/>
+      <stop offset="1" stop-color="#cdb88f"/>
     </linearGradient>
     <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffe9a8"/>
+      <stop offset="0" stop-color="#ffeeb5"/>
       <stop offset="0.55" stop-color="#ffb347"/>
       <stop offset="1" stop-color="#e0702a"/>
     </linearGradient>
+    <linearGradient id="vane" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.5" stop-color="#f3ead8"/>
+      <stop offset="1" stop-color="#c9b48d"/>
+    </linearGradient>
+    <linearGradient id="nib" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9a066"/>
+      <stop offset="1" stop-color="#6b4422"/>
+    </linearGradient>
   </defs>
-  <rect x="8" y="8" width="240" height="240" rx="54" fill="#2a2420"/>
-  <circle cx="128" cy="84" r="74" fill="url(#glow)"/>
-  <path d="M128 30 C 146 58, 150 80, 128 104 C 106 80, 110 58, 128 30 Z" fill="url(#flame)"/>
-  <path d="M128 64 C 136 78, 136 88, 128 98 C 120 88, 120 78, 128 64 Z" fill="#fff6d8"/>
-  <rect x="125" y="100" width="6" height="16" rx="2" fill="#3b2f27"/>
-  <path d="M92 118 Q 92 112 98 112 L 158 112 Q 164 112 164 118 L 164 206 L 92 206 Z" fill="url(#wax)"/>
-  <path d="M140 112 Q 146 112 146 120 L 146 140 Q 146 146 141 146 Q 136 146 136 140 L 136 116 Z" fill="#fbf4e6"/>
-  <rect x="70" y="204" width="116" height="16" rx="8" fill="#8a5a2b"/>
+
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="url(#tile)"/>
+  <circle cx="80" cy="78" r="68" fill="url(#glow)"/>
+
+  <!-- candle -->
+  <path d="M80 34 C 97 58, 101 82, 80 106 C 59 82, 63 58, 80 34 Z" fill="url(#flame)"/>
+  <path d="M80 66 C 88 80, 88 90, 80 100 C 72 90, 72 80, 80 66 Z" fill="#fff6d8"/>
+  <rect x="77" y="102" width="6" height="16" rx="2" fill="#3b2f27"/>
+  <path d="M52 122 Q 52 116 58 116 L 102 116 Q 108 116 108 122 L 108 206 L 52 206 Z" fill="url(#wax)"/>
+  <path d="M88 116 Q 94 116 94 124 L 94 146 Q 94 152 89 152 Q 84 152 84 146 L 84 120 Z" fill="#fffaf0"/>
+  <rect x="34" y="204" width="94" height="16" rx="8" fill="#8a5a2b"/>
+
+  <!-- quill: drawn upright with its tip at (0,0), then leaned against the candle -->
+  <g transform="translate(214,40) rotate(29) scale(1.06)">
+    <path d="M0 0 C -26 24, -33 78, -16 120 L -9 116 L -12 124 L -3 130 L 0 132
+             L 3 130 C 22 96, 28 46, 0 0 Z" fill="url(#vane)"/>
+    <path d="M-1 6 L -22 46 M -1 26 L -26 70 M -1 48 L -26 94 M -1 70 L -20 112
+             M 1 18 L 16 44 M 1 42 L 20 72 M 1 66 L 18 98" stroke="#d6c4a2" stroke-width="1.6" fill="none"/>
+    <path d="M0 4 L 0 152" stroke="#a88a5c" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M-4.5 148 L 4.5 148 L 0 176 Z" fill="url(#nib)"/>
+    <path d="M0 156 L 0 170" stroke="#2a1d14" stroke-width="1"/>
+  </g>
 </svg>

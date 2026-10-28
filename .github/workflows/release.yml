@@ -68,6 +68,9 @@ jobs:
   snap:
     needs: test
     runs-on: ubuntu-latest
+    env:
+      # Set up once: see "Publishing the snap" in the README.
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,15 +81,13 @@ jobs:
         with:
           name: snap
           path: ${{ steps.build.outputs.snap }}
-      # To publish to the Snap Store, register the name and add the
-      # SNAPCRAFT_STORE_CREDENTIALS secret, then uncomment:
-      # - uses: snapcore/action-publish@v1
-      #   if: startsWith(github.ref, 'refs/tags/')
-      #   env:
-      #     SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-      #   with:
-      #     snap: ${{ steps.build.outputs.snap }}
-      #     release: edge
+      # Release tags go to the Snap Store's stable channel (skipped until the
+      # SNAPCRAFT_STORE_CREDENTIALS secret exists).
+      - uses: snapcore/action-publish@v1
+        if: startsWith(github.ref, 'refs/tags/') && env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: stable
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
