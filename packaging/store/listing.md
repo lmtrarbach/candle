@@ -74,6 +74,7 @@ novel, writing, book, author, fiction, manuscript, story
 - **Support contact:** https://github.com/lmtrarbach/candle/issues
 - **Copyright and trademark info:** © 2026 Luthiano Trarbach. Licensed under GPL-3.0.
 - **Screenshots:** `packaging/store/screenshots/` (1920×1080)
+- **Store logos:** `packaging/store/logos/`: poster art 9:16 (1440×2160), box art 1:1 (2160×2160), tile icon (300×300). Regenerate with `python packaging/make_store_logos.py`.
 
 ## Age rating questionnaire (Properties → Age ratings)
 
