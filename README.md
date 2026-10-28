@@ -198,7 +198,7 @@ To change the icon, edit `candle/resources/candle.svg` and run
 To release, bump `__version__` in `candle/__init__.py`, then tag and push:
 
 ```bash
-git tag v0.1.2 && git push origin v0.1.2
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
 `.github/workflows/release.yml` then runs the tests, builds all three platforms

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-10-28
 
 ### Candle Premium (optional subscription)
 
@@ -35,6 +35,9 @@ account Candle never connects to the internet.
 
 ### Other changes
 
+- A **Save** button, **File → Save** (Ctrl+S) and a label that shows whether
+  your latest changes are saved.
+- Microsoft Store logos: poster art, box art and tile icon.
 - `run.sh` removes the GTK and GLib paths that snap apps (such as VS Code's
   terminal) leak into the environment, which made GTK abort on start
   ("…does not contain a key named 'antialiasing'"), even when `$SNAP` isn't
