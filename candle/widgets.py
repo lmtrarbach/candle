@@ -1,5 +1,7 @@
 """Reusable widgets: the rich text editor, check lists, debounced saving."""
 
+import weakref
+
 from PySide6.QtCore import QMimeData, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QAction, QActionGroup, QFont, QIcon, QKeySequence, QTextBlockFormat, QTextCharFormat,
@@ -20,12 +22,20 @@ TEXT_COLUMN = 760      # max width of the text column, in pixels
 class Debouncer:
     """Call `callback` once things have been quiet for `ms` milliseconds."""
 
+    _instances = weakref.WeakSet()
+
     def __init__(self, callback, ms=700):
         self.timer = QTimer()
         self.timer.setSingleShot(True)
         self.timer.setInterval(ms)
         self.timer.timeout.connect(callback)
         self.callback = callback
+        Debouncer._instances.add(self)
+
+    @classmethod
+    def any_pending(cls):
+        """True while some edit is still waiting to be written."""
+        return any(d.timer.isActive() for d in cls._instances)
 
     def poke(self):
         self.timer.start()

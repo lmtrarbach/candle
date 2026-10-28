@@ -147,6 +147,11 @@ class Project:
     def close(self):
         self.conn.close()
 
+    def checkpoint(self):
+        """Fold the write-ahead log into the .candle file itself, so the file
+        is complete on its own (safe to copy while the project is open)."""
+        self.conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
     # -- meta -------------------------------------------------------------
     def get_meta(self, key, default=None):
         row = self.conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()

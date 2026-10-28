@@ -1,7 +1,7 @@
 """The About window: what Candle is, its license, and how to support it."""
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QPixmap
+from PySide6.QtGui import QFontDatabase, QGuiApplication, QPixmap
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QFrame, QGridLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout,
 )

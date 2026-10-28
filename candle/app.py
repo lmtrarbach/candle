@@ -1,3 +1,4 @@
+import datetime
 import sys
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from .db import Project
 from .views.chapters import ChaptersView
 from .views.entities import CharactersView, LocationsView, ObjectsView
 from .views.overview import AnalysisView, ArchitectureView, ExportDialog, ProjectView, TimelineView
-from .widgets import hbox
+from .widgets import Debouncer, hbox
 
 APP_NAME = "Candle"
 EXTENSION = ".candle"
@@ -201,8 +202,18 @@ class MainWindow(QMainWindow):
         self.central.addWidget(workspace)
         self.setCentralWidget(self.central)
 
+        self.save_label = QLabel()
+        self.save_label.setObjectName("hint")
+        self.save_button = QPushButton("Save")
+        self.save_button.setToolTip("Save now (Ctrl+S). Candle also saves automatically as you write.")
+        self.save_button.clicked.connect(self.save_now)
         self.words_label = QLabel()
-        self.statusBar().addPermanentWidget(self.words_label)
+        for widget in (self.save_label, self.save_button, self.words_label):
+            self.statusBar().addPermanentWidget(widget)
+        self._saved_at = None
+        self.save_watch = QTimer(self)
+        self.save_watch.timeout.connect(self._update_save_state)
+        self.save_watch.start(400)
         self._build_menus()
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self, self._escape)
 
@@ -221,6 +232,7 @@ class MainWindow(QMainWindow):
         file.addAction("&Open project…", QKeySequence.StandardKey.Open, self.open_dialog)
         self.recent_menu = file.addMenu("Open &recent")
         file.addSeparator()
+        self.save_action = file.addAction("&Save", QKeySequence.StandardKey.Save, self.save_now)
         self.project_actions = [
             file.addAction("&Export manuscript…", QKeySequence("Ctrl+Shift+E"), self.export),
             file.addAction("&Back up now", self.backup_now),
@@ -234,8 +246,8 @@ class MainWindow(QMainWindow):
         self.full_view_action.setCheckable(True)
         self.focus_action = view.addAction("&Focus mode", QKeySequence("F11"), self.toggle_focus)
         # Also attach to the window, so the shortcuts keep working while the menu bar is hidden.
-        self.addActions([self.full_view_action, self.focus_action])
-        self.project_actions += [self.full_view_action, self.focus_action]
+        self.addActions([self.full_view_action, self.focus_action, self.save_action])
+        self.project_actions += [self.full_view_action, self.focus_action, self.save_action]
         view.addSeparator()
         for i, (name, _) in enumerate(self.views):
             act = view.addAction(name, QKeySequence(f"Ctrl+{i + 1}"), lambda i=i: self.nav.setCurrentRow(i))
@@ -318,6 +330,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Could not open project", f"{path}\n\n{exc}")
             return
         self.project = project
+        self._saved_at = None
         self.settings.setValue("last_dir", str(Path(path).parent))
         self._remember(path)
         for _, view in self.views:
@@ -348,6 +361,29 @@ class MainWindow(QMainWindow):
         for act in self.project_actions:
             act.setEnabled(False)
         self._refresh_recent()
+
+    def save_now(self):
+        """Write every pending edit and make the .candle file complete on its own."""
+        if self.project is None:
+            return
+        self.flush()
+        self.project.checkpoint()
+        self._saved_at = datetime.datetime.now()
+        self._update_save_state()
+        self.update_status()
+
+    def _update_save_state(self):
+        has_project = self.project is not None
+        self.save_label.setVisible(has_project)
+        self.save_button.setVisible(has_project)
+        if not has_project:
+            return
+        if Debouncer.any_pending():
+            self.save_label.setText("Saving…")
+        elif self._saved_at:
+            self.save_label.setText(f"Saved ✓ {self._saved_at:%H:%M}")
+        else:
+            self.save_label.setText("All changes saved ✓")
 
     def flush(self):
         if self.project is None:
@@ -470,6 +506,7 @@ class MainWindow(QMainWindow):
 <tr><td><b>Ctrl+Shift+8 / 7</b></td><td>Bulleted / numbered list</td></tr>
 <tr><td><b>Ctrl+L / E / R / J</b></td><td>Align left / center / right / justify</td></tr>
 <tr><td><b>Ctrl+F</b></td><td>Find in the current text</td></tr>
+<tr><td><b>Ctrl+S</b></td><td>Save now (Candle also saves automatically)</td></tr>
 <tr><td><b>Ctrl+Shift+E</b></td><td>Export manuscript</td></tr>
 </table>""".replace("Ctrl", mod))
 
