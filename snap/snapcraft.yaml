@@ -1,0 +1,44 @@
+name: candle-writer
+title: Candle
+base: core24
+version: git
+summary: Plan and write your novel
+description: |
+  Candle is a novel-writing tool inspired by bibisco. Plan your story's
+  architecture, build characters with in-depth interviews, track locations,
+  objects and plot strands, write chapter by chapter in a distraction-free
+  editor, and export to EPUB, PDF, DOCX, ODT, Markdown or HTML.
+license: GPL-3.0-only
+icon: snap/gui/candle.png
+grade: stable
+confinement: strict
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  candle:
+    command: bin/candle
+    extensions: [gnome]
+    plugs:
+      - home
+      - removable-media
+    environment:
+      QT_QPA_PLATFORM: "wayland;xcb"
+
+parts:
+  candle:
+    plugin: python
+    source: .
+    stage-packages:
+      # Needed by Qt's X11 backend (used when Wayland isn't available).
+      - libxcb-cursor0
+      - libxcb-icccm4
+      - libxcb-image0
+      - libxcb-keysyms1
+      - libxcb-randr0
+      - libxcb-render-util0
+      - libxcb-shape0
+      - libxcb-xinerama0
+      - libxcb-xkb1
+      - libxkbcommon-x11-0

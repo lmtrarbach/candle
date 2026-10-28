@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Candle
+GenericName=Novel Writing
+Comment=Plan and write your novel
+Exec=candle-writer.candle %f
+Icon=${SNAP}/meta/gui/candle.png
+Terminal=false
+Categories=Office;WordProcessor;
+MimeType=application/x-candle;
+StartupWMClass=candle
