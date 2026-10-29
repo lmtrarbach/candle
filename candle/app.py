@@ -4,14 +4,16 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, QStandardPaths, Qt, QThreadPool, QTimer
-from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QKeySequence, QPalette, QShortcut
+from PySide6.QtCore import QSettings, QStandardPaths, Qt, QThreadPool, QTimer, QUrl
+from PySide6.QtGui import (
+    QAction, QActionGroup, QColor, QDesktopServices, QIcon, QKeySequence, QPalette, QShortcut,
+)
 from PySide6.QtWidgets import (
     QApplication, QFileDialog, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem,
     QMainWindow, QMessageBox, QPushButton, QStackedWidget, QStyleFactory, QVBoxLayout, QWidget,
 )
 
-from . import __version__, cloud
+from . import __version__, cloud, sync
 from .about import AboutDialog
 from .account import AccountDialog, PremiumDialog, RestoreDialog, SignInDialog, run_async
 from .db import Project
@@ -357,7 +359,7 @@ class MainWindow(QMainWindow):
         self.nav.setCurrentRow(2)
         self.update_status()
         self._refresh_recent()
-        self.cloud_backup(quiet=True)
+        self.cloud_sync()
 
     def close_project(self):
         if self.project is None:
@@ -444,12 +446,16 @@ class MainWindow(QMainWindow):
         if self.session is None:
             menu.addAction("&Sign in or create account…", self.sign_in)
             menu.addAction("Candle &Premium…", self.show_premium)
+            menu.addAction("Open web &dashboard", self.open_dashboard)
+            menu.addAction("&Write on the web", self.open_web_writer)
             return
         menu.addAction(f"Signed in as {self.session.email}").setEnabled(False)
         menu.addAction("&Back up to cloud now", self.cloud_backup).setEnabled(self.project is not None)
         menu.addAction("&Restore from cloud…", self.restore_from_cloud)
         menu.addSeparator()
         menu.addAction("Candle &Premium…", self.show_premium)
+        menu.addAction("Open web &dashboard", self.open_dashboard)
+        menu.addAction("&Write on the web", self.open_web_writer)
         menu.addAction("&Account…", self.show_account)
         menu.addAction("Sign &out", self.sign_out)
 
@@ -467,6 +473,15 @@ class MainWindow(QMainWindow):
         self.session = None
         self.settings.remove("cloud")
 
+    def open_dashboard(self):
+        # Every backup version to download, and KDP files, in the browser.
+        QDesktopServices.openUrl(QUrl(f"{cloud.API_URL}/account"))
+
+    def open_web_writer(self):
+        # Candle on the web (Premium): this project, if one is open and backed up.
+        query = f"?project={self.project.cloud_id()}" if self.project is not None else ""
+        QDesktopServices.openUrl(QUrl(f"{cloud.API_URL}/write{query}"))
+
     def show_premium(self):
         dialog = PremiumDialog(self.session, self)
         dialog.exec()
@@ -480,11 +495,101 @@ class MainWindow(QMainWindow):
         dialog.signed_out.connect(self.sign_out)
         dialog.exec()
 
+    # -- Changes made in Candle on the web ---------------------------------
+    def cloud_sync(self):
+        """On opening a project: bring in changes made on the web, then back up."""
+        if self.project is None or self.session is None:
+            return
+        project, session = self.project, self.session
+        project_id = project.cloud_id()
+
+        def checked(backups):
+            if project is not self.project:
+                return
+            latest = backups[0] if backups else None
+            if latest and latest.get("source") == "web" and latest["backup_id"] != project.get_meta("cloud_base"):
+                if self._offer_web_version(project, latest):
+                    return   # loading it; the project is reopened and backed up after
+            self.cloud_backup(quiet=True)
+
+        # Offline or signed out: back up as usual, which reports nothing when quiet.
+        run_async(lambda: session.backups(project_id), checked, lambda exc: self.cloud_backup(quiet=True))
+
+    def _offer_web_version(self, project, latest):
+        """Ask about a newer version written on the web; True if it's being loaded."""
+        when = datetime.datetime.fromisoformat(latest["created"]).astimezone().strftime("%Y-%m-%d %H:%M")
+        if sync.unchanged_since_sync(project):
+            answer = QMessageBox.question(
+                self, "Changes made on the web",
+                f"This book was edited in Candle on the web ({when}).<br><br>Bring those changes in? "
+                "Only chapters and scenes change; your characters, locations and notes here stay as "
+                "they are. A copy of this file is kept in Candle's backups first.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes)
+            if answer == QMessageBox.StandardButton.Yes:
+                self._load_web_version(project, latest)
+                return True
+            return False
+        box = QMessageBox(QMessageBox.Icon.Warning, "Edited in two places",
+                          f"This book was edited in Candle on the web ({when}), and its chapters or scenes "
+                          "also changed here since then. Nothing is merged automatically.<br><br>"
+                          "You can save the web version as a separate file to compare the two.", parent=self)
+        save_copy = box.addButton("Save the web version as a file…", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton("Keep this file", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is save_copy:
+            self._save_web_copy(project, latest, when)
+        return False
+
+    def _load_web_version(self, project, latest):
+        folder = Path(tempfile.mkdtemp(prefix="candle-web-"))
+        target = folder / "web.candle"
+        project_id, path = project.cloud_id(), project.path
+        self.statusBar().showMessage("Loading the changes made on the web…")
+
+        def done(_):
+            try:
+                if project is self.project:
+                    self.flush()
+                    project.backup(self.backup_dir())   # a way back, just in case
+                    sync.adopt_writing(project, target)
+                    sync.remember(project, latest["backup_id"], sync.fingerprint(project))
+                    self.open_project(str(path))         # reload every view; backs up again
+                    self.statusBar().showMessage("Loaded the changes made on the web ✓", 8000)
+            finally:
+                shutil.rmtree(folder, ignore_errors=True)
+
+        def failed(exc):
+            shutil.rmtree(folder, ignore_errors=True)
+            QMessageBox.warning(self, "Changes made on the web", f"Couldn't load them.\n\n{exc}")
+            self.cloud_backup(quiet=True)
+
+        run_async(lambda: self.session.download(project_id, latest["backup_id"], target), done, failed)
+
+    def _save_web_copy(self, project, latest, when):
+        default = project.path.with_name(f"{project.path.stem} (web {when[:10]}).candle")
+        path, _ = QFileDialog.getSaveFileName(self, "Save the web version", str(default), "Candle project (*.candle)")
+        if not path:
+            return
+        target = Path(path if path.endswith(".candle") else path + ".candle")
+        if target.exists():
+            QMessageBox.warning(self, "File exists", "A file with that name already exists. Choose another name.")
+            return
+
+        def done(_):
+            sync.detach(target)   # its own project from now on, with its own backups
+            QMessageBox.information(self, "Web version saved",
+                                    f"Saved as {target.name}. Open it with File → Open to compare; "
+                                    "it's a separate project now.")
+
+        run_async(lambda: self.session.download(project.cloud_id(), latest["backup_id"], target), done,
+                  lambda exc: QMessageBox.warning(self, "Web version", f"Couldn't save it.\n\n{exc}"))
+
     def cloud_backup(self, quiet=False):
         if self.project is None or self.session is None or self._cloud_busy:
             return
         self.flush()
         project_id = self.project.cloud_id()   # before the snapshot, so copies keep it
+        project, print_ = self.project, sync.fingerprint(self.project)
         folder = Path(tempfile.mkdtemp(prefix="candle-upload-"))
         snapshot = self.project.snapshot(folder / "project.candle")
         title, session = self.project.title, self.session
@@ -498,8 +603,10 @@ class MainWindow(QMainWindow):
             finally:
                 shutil.rmtree(folder, ignore_errors=True)
 
-        def done(_):
+        def done(result):
             self._cloud_busy = False
+            if project is self.project and result:
+                sync.remember(project, result["backup_id"], print_)   # what this file now matches
             self.statusBar().showMessage("Backed up to the cloud ✓", 6000)
 
         def failed(exc):

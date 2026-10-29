@@ -136,6 +136,11 @@ password, then hands you back to the app.
   page numbers, and fonts are embedded. Upload it with **No bleed** and order
   a proof copy before publishing. The book is laid out on your computer; it is
   never uploaded.
+- **Web dashboard:** **Account → Open web dashboard** opens your account in the
+  browser, from any computer: every backup version of every project to
+  download, a KDP paperback PDF from any version, and your subscription.
+
+Help with an account, Premium or a payment: <luthiano.trarbach@proton.me>.
 
 Without an account, Candle never connects to the internet. The service behind
 this (a small API on Google Cloud Run, with backups in Cloud Storage) lives in
