@@ -24,6 +24,12 @@ account Candle never connects to the internet.
   numbers skip blank and opening pages, fonts are embedded. The book is laid
   out on your computer and never uploaded. Typesetting uses
   [Typst](https://typst.app).
+- **Web dashboard.** **Account → Open web dashboard** (or the service's
+  `/account` page, from any computer) lists every project in the cloud and
+  every backup version: download any as a `.candle` file, or make a KDP
+  paperback PDF from it (laid out on the server from that backup; the PDF
+  isn't kept). It also shows the plan and opens checkout or the billing
+  portal.
 - **Candle Premium window.** **Account → Candle Premium…** explains what
   Premium adds and what it costs, and lets you subscribe (monthly or yearly,
   through Stripe Checkout) or manage your subscription (Stripe's billing
@@ -49,7 +55,9 @@ account Candle never connects to the internet.
 
 ### For developers
 
-- The Premium service address and Firebase Web API key are built into
+- The Premium service lives at `https://app.candlewriter.com` (the API, the
+  sign-in page, the web dashboard at `/account` and Candle on the web at
+  `/write`). That address and the Firebase Web API key are built into
   `candle/cloud.py`. `CANDLE_API_URL` and `CANDLE_FIREBASE_KEY` override them
   (for a test deployment); set them empty to run without Premium. The
   Firebase Web API key is public by design: it identifies the project and is

@@ -25,8 +25,11 @@ import urllib.request
 # build or run Candle without Premium (the Account menu then stays hidden).
 # The Firebase web API key is public by design: it identifies the project, it
 # doesn't grant access to anything.
-API_URL = os.environ.get("CANDLE_API_URL", "https://candle-api-539288979636.us-central1.run.app").rstrip("/")
+API_URL = os.environ.get("CANDLE_API_URL", "https://app.candlewriter.com").rstrip("/")
 FIREBASE_API_KEY = os.environ.get("CANDLE_FIREBASE_KEY", "AIzaSyC0B4M8QHFwRCHV_nRRBMwszc1Xtps-5Uc")
+
+# Help with an account, Candle Premium or a payment.
+SUPPORT_EMAIL = "luthiano.trarbach@proton.me"
 
 IDENTITY = "https://identitytoolkit.googleapis.com/v1/accounts:"
 SECURE_TOKEN = "https://securetoken.googleapis.com/v1/token"

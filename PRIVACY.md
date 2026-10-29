@@ -49,6 +49,10 @@ computer, and why:
   separate folder that only that account can open. They are encrypted at rest
   by Google Cloud. The latest 20 backups of each project are kept, and older
   ones are deleted automatically.
+- **KDP files made on the web dashboard.** If you make a KDP paperback PDF on
+  the web dashboard (rather than in Candle), the service reads the backup you
+  chose, which is already stored there, lays it out, and sends you the PDF.
+  The PDF isn't kept. In Candle itself, the book is laid out on your computer.
 - **Basic request logs** (time, address, and which request was made, but never
   the contents of your projects), kept by Google Cloud for running and securing
   the service.
@@ -70,4 +74,7 @@ public in the repository.
 
 ## Contact
 
-Questions? Open an issue at <https://github.com/lmtrarbach/candle/issues>.
+Questions about your account, Candle Premium, a payment or your data (for
+example, to ask what's stored or to have it deleted): email
+<luthiano.trarbach@proton.me>. For anything else, open an issue at
+<https://github.com/lmtrarbach/candle/issues>.

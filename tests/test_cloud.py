@@ -26,6 +26,7 @@ class FakeServers:
                              {"plan": "yearly", "label": "US$36 / year"}],
                    "limits": {"projects": 50, "backups_per_project": 20}}
         self.bodies = {}         # path -> last JSON body sent to the API
+        self.versions = []       # what GET …/backups answers
 
     def __call__(self, method, url, *, json_body=None, form=None, data=None, headers=None, timeout=60):
         self.calls.append((method, url, headers or {}))
@@ -56,6 +57,8 @@ class FakeServers:
                 "headers": {"Content-Type": "application/octet-stream", "x-goog-meta-title": "T"}}}).encode()
         if path.endswith("/complete"):
             return 200, b'{"backup_id": "B1"}'
+        if method == "GET" and path.endswith("/backups"):
+            return 200, json.dumps(self.versions).encode()
         if path.endswith("/download"):
             return 200, b'{"url": "https://gcs/obj"}'
         if path == "/v1/me":
@@ -133,6 +136,20 @@ def test_sign_in_dialog(qapp, servers, monkeypatch):
     assert dialog.result() == account.QDialog.DialogCode.Accepted
 
 
+def test_opening_the_browser_again_keeps_the_same_link(qapp, servers, monkeypatch):
+    # The writer may finish in the first tab after clicking twice: it must still reach Candle.
+    from candle import account
+    opened = []
+    monkeypatch.setattr(account.QDesktopServices, "openUrl", lambda url: opened.append(url.toString()) or True)
+    dialog = account.SignInDialog()
+    dialog.go_btn.click()
+    first = dialog.flow
+    dialog.go_btn.click()
+    assert dialog.flow is first and opened == [first.url, first.url]
+    later(hand_over, first)
+    assert wait_for(lambda: dialog.session is not None)
+
+
 def test_upload_sends_the_signed_headers(servers, tmp_path):
     project = Project.create(tmp_path / "novel.candle", "Novel")
     snapshot = project.snapshot(tmp_path / "copy.candle")
@@ -193,12 +210,16 @@ def test_released_build_stays_offline_until_sign_in(qapp, monkeypatch):
     # The service is built in, but nothing goes online before the writer signs in.
     from candle.app import MainWindow
     monkeypatch.setattr(cloud, "_http", lambda *a, **k: pytest.fail("went online"))
-    assert cloud.configured() and cloud.API_URL.startswith("https://")
+    assert cloud.configured() and cloud.API_URL == "https://app.candlewriter.com"
     window = MainWindow()
     try:
         assert "&Account" in [a.text() for a in window.menuBar().actions()]
         assert window.session is None
         QTest.qWait(100)
+        opened = []
+        monkeypatch.setattr("candle.app.QDesktopServices.openUrl", lambda url: opened.append(url.toString()))
+        window.open_dashboard()
+        assert opened == [f"{cloud.API_URL}/account"]
     finally:
         window.close()
 
@@ -212,12 +233,10 @@ def test_opening_a_project_backs_it_up(qapp, servers, tmp_path):
     try:
         assert "&Account" in [a.text() for a in window.menuBar().actions()]
         window.open_project(str(path))
-        for _ in range(100):
-            if not window._cloud_busy:
-                break
-            QTest.qWait(50)
+        # First a look at the cloud for changes made on the web, then the backup.
+        assert wait_for(lambda: window.statusBar().currentMessage() == "Backed up to the cloud ✓")
         assert servers.uploads["https://gcs/obj"][0].startswith(cloud.SQLITE_MAGIC)
-        assert window.statusBar().currentMessage() == "Backed up to the cloud ✓"
+        assert window.project.get_meta("cloud_base") == "B1"     # what this file now matches
     finally:
         window.close_project()
         window.close()

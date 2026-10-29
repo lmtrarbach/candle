@@ -72,6 +72,15 @@ def open_billing(get_url, button, status):
     run_async(get_url, opened, failed)
 
 
+def support_label():
+    label = QLabel(f"Questions about your account or a payment? "
+                   f"<a href='mailto:{cloud.SUPPORT_EMAIL}'>{cloud.SUPPORT_EMAIL}</a>")
+    label.setObjectName("hint")
+    label.setOpenExternalLinks(True)
+    label.setWordWrap(True)
+    return label
+
+
 def human_size(n):
     for unit in ("bytes", "KB", "MB", "GB"):
         if n < 1024 or unit == "GB":
@@ -121,27 +130,30 @@ class SignInDialog(QDialog):
         layout.addWidget(hbox(None, cancel, self.go_btn))
 
     def _start(self):
-        if self.flow:
-            self.flow.cancel()   # a second click starts over with a new link
-        flow = self.flow = cloud.BrowserSignIn()
-        self.go_btn.setText("Open the browser again")
-        self.copy_link.setVisible(True)
-        if QDesktopServices.openUrl(QUrl(flow.url)):
-            self.status.setText("Finish signing in in your browser. This window updates by itself.")
-        else:
-            self.status.setText("Couldn't open your browser. Copy the link below into it.")
+        # Clicking again reopens the same link, so whichever browser tab the
+        # writer finishes in can still reach Candle. A new link (and port)
+        # only after the last one failed.
+        if self.flow is None:
+            flow = self.flow = cloud.BrowserSignIn()
 
-        def done(session):
-            if flow is self.flow:
+            def done(session):
                 self.session = session
                 self.accept()
 
-        def failed(exc):
-            if flow is self.flow and not flow._cancelled.is_set():
-                self.status.setText(str(exc))
-                self.go_btn.setText("Continue in browser")
+            def failed(exc):
+                if flow is self.flow and not flow._cancelled.is_set():
+                    self.flow = None
+                    self.status.setText(str(exc))
+                    self.go_btn.setText("Continue in browser")
 
-        run_async(flow.wait, done, failed)
+            run_async(flow.wait, done, failed)
+        self.go_btn.setText("Open the browser again")
+        self.copy_link.setVisible(True)
+        if QDesktopServices.openUrl(QUrl(self.flow.url)):
+            self.status.setText("Finish signing in in your browser, and keep this window open: "
+                                "it updates by itself.")
+        else:
+            self.status.setText("Couldn't open your browser. Copy the link below into it.")
 
     def _copy_link(self):
         if self.flow:
@@ -195,6 +207,7 @@ class AccountDialog(QDialog):
         layout.addWidget(hbox(self.premium_btn, self.manage_btn, None))
         layout.addSpacing(8)
         layout.addWidget(hbox(sign_out, delete, None))
+        layout.addWidget(support_label())
         layout.addWidget(buttons)
         run_async(session.me, self._show, lambda exc: self.status.setText(str(exc)))
 
@@ -248,6 +261,9 @@ class PremiumDialog(QDialog):
         ("📖", "Print-ready Amazon KDP paperbacks",
          "Export a PDF interior in any of KDP's 16 trim sizes, with the margins KDP requires and "
          "chapters opening on right-hand pages."),
+        ("✍", "Write on the web",
+         "Write your chapters and scenes from any browser. Candle brings the changes in the next "
+         "time you open the project here."),
         ("🔒", "Private",
          "Your backups sit in a folder only your account can open. Cancel anytime: your backups "
          "stay downloadable after Premium ends."),
@@ -288,6 +304,7 @@ class PremiumDialog(QDialog):
         layout.addWidget(self.status)
         self.button_row = hbox(self.sign_in_btn, self.manage_btn, None, close)
         layout.addWidget(self.button_row)
+        layout.addWidget(support_label())
 
         failed = lambda exc: self.status.setText(str(exc))   # noqa: E731
         if session is None:
