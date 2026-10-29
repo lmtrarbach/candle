@@ -480,7 +480,7 @@ class MainWindow(QMainWindow):
     def open_web_writer(self):
         # Candle on the web (Premium): this project, if one is open and backed up.
         query = f"?project={self.project.cloud_id()}" if self.project is not None else ""
-        QDesktopServices.openUrl(QUrl(f"{cloud.API_URL}/write{query}"))
+        QDesktopServices.openUrl(QUrl(f"{cloud.API_URL}/{query}"))
 
     def show_premium(self):
         dialog = PremiumDialog(self.session, self)
@@ -522,16 +522,16 @@ class MainWindow(QMainWindow):
             answer = QMessageBox.question(
                 self, "Changes made on the web",
                 f"This book was edited in Candle on the web ({when}).<br><br>Bring those changes in? "
-                "Only chapters and scenes change; your characters, locations and notes here stay as "
-                "they are. A copy of this file is kept in Candle's backups first.",
+                "This file hasn't changed since its last cloud backup, so nothing here is lost; a copy "
+                "of it is kept in Candle's backups first.",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes)
             if answer == QMessageBox.StandardButton.Yes:
                 self._load_web_version(project, latest)
                 return True
             return False
         box = QMessageBox(QMessageBox.Icon.Warning, "Edited in two places",
-                          f"This book was edited in Candle on the web ({when}), and its chapters or scenes "
-                          "also changed here since then. Nothing is merged automatically.<br><br>"
+                          f"This book was edited in Candle on the web ({when}), and it also changed here "
+                          "since then. Nothing is merged automatically.<br><br>"
                           "You can save the web version as a separate file to compare the two.", parent=self)
         save_copy = box.addButton("Save the web version as a file…", QMessageBox.ButtonRole.AcceptRole)
         box.addButton("Keep this file", QMessageBox.ButtonRole.RejectRole)
@@ -551,7 +551,7 @@ class MainWindow(QMainWindow):
                 if project is self.project:
                     self.flush()
                     project.backup(self.backup_dir())   # a way back, just in case
-                    sync.adopt_writing(project, target)
+                    sync.adopt_version(project, target)
                     sync.remember(project, latest["backup_id"], sync.fingerprint(project))
                     self.open_project(str(path))         # reload every view; backs up again
                     self.statusBar().showMessage("Loaded the changes made on the web ✓", 8000)

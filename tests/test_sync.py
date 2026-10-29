@@ -57,25 +57,65 @@ def test_fingerprint_ignores_how_the_text_was_saved(qapp, tmp_path):
     # The same words, saved as plain HTML (the web) instead of Qt's: no change.
     p.save_scene_content(scene, "<p>It was a <b>dark</b> night.</p>", "x")
     assert sync.fingerprint(p) == before
-    p.update("scenes", scene, notes="other notes")          # not something the web edits
-    assert sync.fingerprint(p) == before
+    p.set_meta("arch_premise", qt_html("<p>A keeper.</p>"))
+    after_premise = sync.fingerprint(p)
+    p.set_meta("arch_premise", "<p>A keeper.</p>")                     # same text, other HTML
+    assert sync.fingerprint(p) == after_premise != before
     p.save_scene_content(scene, "<p>It was a dark night.</p>", "x")   # bold gone: a real change
-    assert sync.fingerprint(p) != before
+    assert sync.fingerprint(p) != after_premise
+
+
+def test_fingerprint_covers_everything_the_web_edits(qapp, tmp_path):
+    p, _, scene = make(tmp_path)
+    marta = p.list("characters")[0]["id"]
+    changes = [
+        lambda: p.update("characters", marta, name="Marta L."),
+        lambda: p.set_answer(marta, "personal", 0, "Marta Lindqvist"),
+        lambda: p.set_link(scene, "character", marta, True),
+        lambda: p.insert("locations", name="Harbour"),
+        lambda: p.insert("strands", name="The storm"),
+        lambda: p.update("scenes", scene, scene_time="1903-10-01"),
+        lambda: p.update("scenes", scene, notes="other notes"),
+        lambda: p.set_meta("daily_goal", 500),
+        lambda: p.add_revision(scene),
+    ]
+    for change in changes:
+        before = sync.fingerprint(p)
+        change()
+        assert sync.fingerprint(p) != before
+    before = sync.fingerprint(p)
+    p.start_day()                                                    # Candle's own bookkeeping…
+    sync.remember(p, "B9", "x")                                      # …doesn't count
+    assert sync.fingerprint(p) == before
     p.close()
 
 
-def test_adopt_writing_keeps_the_rest_of_the_file(qapp, tmp_path):
+def test_adopt_version_takes_everything_and_keeps_the_days(qapp, tmp_path):
     p, ch, scene = make(tmp_path)
     version = p.snapshot(tmp_path / "web.candle")
     web_edit(version, scene, ch)
-    sync.adopt_writing(p, version)
+    conn = sqlite3.connect(version)
+    with conn:
+        conn.execute("UPDATE characters SET name = 'Marta L.'")
+        conn.execute("INSERT INTO character_answers VALUES (1, 'conflict', 0, 'The light')")
+        conn.execute("INSERT INTO meta VALUES ('arch_themes', '<p>Duty</p>') "
+                     "ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    conn.close()
+    p.conn.execute("INSERT INTO daily VALUES ('2099-01-01', 42)")    # recorded only here
+    cloud_id = p.cloud_id()
+    conn = sqlite3.connect(version)
+    with conn:
+        conn.execute("DELETE FROM meta WHERE key = 'cloud_id'")           # even if the version lacks it
+    conn.close()
+    sync.adopt_version(p, version)
+    assert p.get_meta("cloud_id") == cloud_id
     row = p.get("scenes", scene)
-    assert "rain" in row["content"] and row["status"] == "done" and row["words"] == 6
-    assert row["notes"] == "my notes" and row["pov_id"] is not None      # kept from this file
-    scenes = p.list("scenes")
-    assert len(scenes) == 2 and scenes[1]["title"] == "Dawn"            # "Doomed" deleted, "Dawn" added
-    assert [c["id"] for c in p.list("chapters")] == [ch]                  # "Gone" deleted, as on the web
-    assert [c["name"] for c in p.list("characters")] == ["Marta"]
+    assert "rain" in row["content"] and row["status"] == "done" and row["notes"] == "my notes"
+    assert [c["name"] for c in p.list("characters")] == ["Marta L."]
+    assert p.answers(p.list("characters")[0]["id"])[("conflict", 0)] == "The light"
+    assert p.get_meta("arch_themes") == "<p>Duty</p>"
+    assert [c["id"] for c in p.list("chapters")] == [ch]
+    assert p.conn.execute("SELECT start_words FROM daily WHERE day = '2099-01-01'").fetchone()[0] == 42
     p.close()
 
 
