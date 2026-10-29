@@ -1,15 +1,15 @@
 """Bringing changes made in Candle on the web into a project file.
 
-Candle on the web edits a project's chapters and scenes only, and saves a new
-cloud version. When the project is opened here, Candle compares:
+Candle on the web edits everything Candle does and saves a new cloud version.
+When the project is opened here, Candle compares:
 
 - `cloud_base` (project meta): the cloud version this file last matched, set
   after each backup and after loading web changes;
-- `cloud_fingerprint`: a hash of the chapters and scenes at that moment.
+- `cloud_fingerprint`: a hash, at that moment, of everything the web can edit.
 
-If the newest cloud version came from the web and this file's chapters and
-scenes are unchanged since `cloud_base`, the web's chapters and scenes can be
-brought in (`adopt_writing`), keeping everything else in the file. If both
+If the newest cloud version came from the web and this file is unchanged
+since `cloud_base`, the web version replaces this file's contents
+(`adopt_version`); nothing here is lost, since nothing here changed. If both
 changed, nothing is merged: the web version can be saved as its own file.
 """
 
@@ -19,19 +19,45 @@ import sqlite3
 
 from . import richtext
 
+# What Candle on the web edits (candle_premium/server/app/webedit.py).
+META_KEYS = ("title", "author", "language", "target_words", "daily_goal",
+             "arch_premise", "arch_fabula", "arch_setting", "arch_themes", "arch_notes")
+RICH_META = {k for k in META_KEYS if k.startswith("arch_")}
+TABLES = {
+    # table: (columns, rich-text columns), rows ordered by their key columns
+    "chapters": ("id, title, reason, notes, position", {"reason", "notes"}),
+    "scenes": ("id, chapter_id, title, content, notes, status, pov_id, location_id, scene_time, position",
+               {"content"}),
+    "scene_links": ("scene_id, kind, target_id", set()),
+    "scene_revisions": ("id, scene_id", set()),
+    "characters": ("id, name, role, description, position", {"description"}),
+    "character_answers": ("character_id, section, question, answer", set()),
+    "locations": ("id, name, nation, state, city, description, position", {"description"}),
+    "objects": ("id, name, description, position", {"description"}),
+    "strands": ("id, name, description, position", {"description"}),
+}
+
+
+def _text(rich):
+    """Rich text as Candle's paragraph model: the same words saved by the web
+    and by Candle's editor (different HTML) compare equal."""
+    return [[p.kind, p.align, [[r.text, r.bold, r.italic, r.underline, r.strike] for r in p.runs if r.text]]
+            for p in richtext.non_empty(richtext.parse(rich or ""))]
+
 
 def fingerprint(project):
-    """A hash of the chapters and scenes as text (what the web can change).
-    Scene text is compared as Candle's paragraph model, not raw HTML, so the
-    same words saved by the web and by Candle's editor count as the same."""
+    """A hash of everything Candle on the web can change."""
     h = hashlib.sha256()
-    for row in project.conn.execute("SELECT id, title, position FROM chapters ORDER BY id"):
-        h.update(json.dumps(["c", *row]).encode())
-    for row in project.conn.execute(
-            "SELECT id, chapter_id, title, status, position, content FROM scenes ORDER BY id"):
-        paras = [[p.kind, p.align, [[r.text, r.bold, r.italic, r.underline, r.strike] for r in p.runs if r.text]]
-                 for p in richtext.non_empty(richtext.parse(row[5]))]
-        h.update(json.dumps(["s", *row[:5], paras]).encode())
+    meta = dict(project.conn.execute("SELECT key, value FROM meta").fetchall())
+    for key in META_KEYS:
+        value = meta.get(key)
+        value = _text(value) if key in RICH_META else ("" if value is None else str(value))
+        h.update(json.dumps(["meta", key, value]).encode())
+    for table, (columns, rich) in TABLES.items():
+        names = [c.strip() for c in columns.split(",")]
+        for row in project.conn.execute(f"SELECT {columns} FROM {table} ORDER BY {columns}"):
+            values = [_text(v) if name in rich else v for name, v in zip(names, row)]
+            h.update(json.dumps([table, *values]).encode())
     return h.hexdigest()
 
 
@@ -45,34 +71,24 @@ def unchanged_since_sync(project):
     return bool(project.get_meta("cloud_base")) and project.get_meta("cloud_fingerprint") == fingerprint(project)
 
 
-def adopt_writing(project, version_path):
-    """Make this project's chapters and scenes those of the version at
-    `version_path` (written on the web). Ids are shared, so a scene keeps its
-    notes, POV, location, links and revisions here; scenes and chapters the
-    web deleted are deleted, as in Candle. Only safe when this file's chapters
-    and scenes haven't changed since that version's base (see module doc)."""
+def adopt_version(project, version_path):
+    """Make this project's contents those of the version at `version_path`
+    (written on the web from this file's last cloud version). Only safe when
+    this file is unchanged since then (see module doc). This file's cloud id
+    (its link to its backups) and the days' starting word counts recorded
+    here are kept."""
+    days = project.conn.execute("SELECT day, start_words FROM daily").fetchall()
+    cloud_id = project.get_meta("cloud_id")
+    project.conn.commit()
     other = sqlite3.connect(f"file:{version_path}?mode=ro", uri=True)
     try:
-        chapters = other.execute("SELECT id, title, position FROM chapters").fetchall()
-        scenes = other.execute(
-            "SELECT id, chapter_id, title, status, content, words, position FROM scenes").fetchall()
+        other.backup(project.conn)
     finally:
         other.close()
-    conn = project.conn
-    with conn:
-        for chapter in chapters:
-            conn.execute("INSERT INTO chapters (id, title, position) VALUES (?, ?, ?) ON CONFLICT(id) DO "
-                         "UPDATE SET title = excluded.title, position = excluded.position", chapter)
-        for scene in scenes:
-            conn.execute(
-                "INSERT INTO scenes (id, chapter_id, title, status, content, words, position) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET chapter_id = excluded.chapter_id, "
-                "title = excluded.title, status = excluded.status, content = excluded.content, "
-                "words = excluded.words, position = excluded.position", scene)
-        keep_scenes = [s[0] for s in scenes] or [-1]
-        keep_chapters = [c[0] for c in chapters] or [-1]
-        conn.execute(f"DELETE FROM scenes WHERE id NOT IN ({','.join('?' * len(keep_scenes))})", keep_scenes)
-        conn.execute(f"DELETE FROM chapters WHERE id NOT IN ({','.join('?' * len(keep_chapters))})", keep_chapters)
+    with project.conn:
+        project.conn.executemany("INSERT OR IGNORE INTO daily (day, start_words) VALUES (?, ?)", days)
+    if cloud_id:
+        project.set_meta("cloud_id", cloud_id)
 
 
 def detach(version_path):

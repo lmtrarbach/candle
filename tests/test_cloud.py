@@ -219,7 +219,8 @@ def test_released_build_stays_offline_until_sign_in(qapp, monkeypatch):
         opened = []
         monkeypatch.setattr("candle.app.QDesktopServices.openUrl", lambda url: opened.append(url.toString()))
         window.open_dashboard()
-        assert opened == [f"{cloud.API_URL}/account"]
+        window.open_web_writer()
+        assert opened == [f"{cloud.API_URL}/account", f"{cloud.API_URL}/"]   # Candle on the web: the home page
     finally:
         window.close()
 
