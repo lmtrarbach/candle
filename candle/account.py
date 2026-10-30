@@ -264,6 +264,9 @@ class PremiumDialog(QDialog):
         ("✍", "Write on the web",
          "Write your chapters and scenes from any browser. Candle brings the changes in the next "
          "time you open the project here."),
+        ("🔥", "Goals, with Wick",
+         "Daily goals in words or pages, streaks, a deadline's pace, and reminders from Wick, your "
+         "writing companion."),
         ("🔒", "Private",
          "Your backups sit in a folder only your account can open. Cancel anytime: your backups "
          "stay downloadable after Premium ends."),
@@ -329,17 +332,29 @@ class PremiumDialog(QDialog):
         if not offer["plans"]:
             self.status.setText("Candle Premium isn't on sale yet.")
             return
-        self.status.setText(f"<b>{self._prices(offer['plans'])}</b>. Sign in or create a free "
+        trial = offer.get("trial_days")
+        self.status.setText((f"<b>Free for {trial} days</b>, then " if trial else "") +
+                            f"<b>{self._prices(offer['plans'])}</b>. Sign in or create a free "
                             "account first; it takes a minute in your browser.")
         self.sign_in_btn.setVisible(True)
 
     def _show_account(self, me):
         self.features.setText(self._features_html(me["limits"]["backups_per_project"]))
-        if me["premium"]:
+        if me["premium"] and me.get("trial_ends"):
+            ends = datetime.datetime.fromisoformat(me["trial_ends"]).astimezone()
+            self.status.setText(f"<b>You're on a free trial of Candle Premium ✓</b> It ends on {ends:%d %B %Y}, "
+                                "when your plan starts. To stop it, cancel in <b>Manage subscription</b> "
+                                "before then and you won't be charged.")
+        elif me["premium"]:
             self.status.setText("<b>You have Candle Premium ✓</b> Thank you for supporting Candle.")
         elif not me["email_verified"]:
             self.status.setText("Confirm your email address first: open the link we emailed you, "
                                 "then reopen this window.")
+        elif me.get("plans") and me.get("trial_days"):
+            self.status.setText(f"<b>Try it free for {me['trial_days']} days</b>, then "
+                                f"<b>{self._prices(me['plans'])}</b>. You add a card with Stripe and aren't "
+                                "charged until the trial ends; cancel before then and you pay nothing.")
+            self._offer(me["plans"], trial=True)
         elif me.get("plans"):
             self.status.setText(f"<b>{self._prices(me['plans'])}</b>. Pay securely with Stripe; "
                                 "cancel anytime.")
@@ -348,10 +363,10 @@ class PremiumDialog(QDialog):
             self.status.setText("Candle Premium isn't on sale yet.")
         self.manage_btn.setVisible(me.get("can_manage_subscription", False))
 
-    def _offer(self, plans):
+    def _offer(self, plans, trial=False):
         # Yearly first and highlighted: it's the better deal.
         for plan in sorted(plans, key=lambda p: p["plan"] != "yearly"):
-            button = QPushButton(plan["label"])
+            button = QPushButton(f"Free trial, then {plan['label']}" if trial else plan["label"])
             if plan["plan"] == "yearly":
                 button.setObjectName("primary")
             button.clicked.connect(lambda _=False, name=plan["plan"], b=button: open_billing(
