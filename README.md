@@ -10,7 +10,7 @@ by scene.
 
 No ads, no account needed. Your novels stay on your computer, unless you choose
 optional [Candle Premium](#candle-premium-optional) cloud backup.
-
+[Premium](https://app.candlewriter.com)
 ## Install
 
 ### Linux (Snap)
