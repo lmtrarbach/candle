@@ -13,12 +13,14 @@ from PySide6.QtWidgets import (
     QMainWindow, QMessageBox, QPushButton, QStackedWidget, QStyleFactory, QVBoxLayout, QWidget,
 )
 
-from . import __version__, cloud, sync
+from . import __version__, cloud, coach, sync
 from .about import AboutDialog
 from .account import AccountDialog, PremiumDialog, RestoreDialog, SignInDialog, run_async
 from .db import Project
+from .notify import notify
 from .views.chapters import ChaptersView
 from .views.entities import CharactersView, LocationsView, ObjectsView
+from .views.goals import GoalsView
 from .views.overview import AnalysisView, ArchitectureView, ExportDialog, ProjectView, TimelineView
 from .widgets import Debouncer, hbox
 
@@ -62,6 +64,8 @@ QWidget {{ font-size: 10.5pt; }}
 #wordCount {{ color: {muted}; padding: 3px; border-top: 1px solid {border}; }}
 #card {{ background: {base}; border: 1px solid {border}; border-radius: 8px; }}
 #cardValue {{ font-size: 20pt; font-weight: 600; color: {accent}; }}
+#coachMessage {{ font-family: "Literata", "Noto Serif", "Georgia", serif; font-size: 14pt; }}
+#weekMark {{ font-size: 15pt; color: {muted}; }}
 #welcomeTitle {{ font-size: 40pt; font-family: "Noto Serif", "Georgia", serif; color: {accent}; }}
 #welcomeTag {{ font-size: 13pt; color: {muted}; }}
 QPushButton {{ padding: 5px 12px; }}
@@ -160,6 +164,7 @@ class MainWindow(QMainWindow):
         self.settings = QSettings(APP_NAME, APP_NAME)
         self.project = None
         self.session = self._load_session()
+        self.premium = self.session is not None and self.settings.value("cloud/premium", False, bool)
         self._cloud_busy = False
         self.focus_mode = False
         self.full_view = False
@@ -177,6 +182,7 @@ class MainWindow(QMainWindow):
             ("Objects", ObjectsView()),
             ("Timeline", TimelineView()),
             ("Analysis", AnalysisView()),
+            ("Goals", GoalsView()),
         ]
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
@@ -190,6 +196,8 @@ class MainWindow(QMainWindow):
 
         self.project_view = self.views[0][1]
         self.chapters_view = self.views[2][1]
+        self.goals_view = self.views[-1][1]
+        self.goals_view.premium_requested.connect(self.show_premium)
         self.chapters_view.full_view_requested.connect(self.toggle_full_view)
         self.project_view.export_requested.connect(self.export)
         self.project_view.backup_requested.connect(self.backup_now)
@@ -234,6 +242,13 @@ class MainWindow(QMainWindow):
         self.cloud_timer.timeout.connect(lambda: self.cloud_backup(quiet=True))
         self.cloud_timer.start(60 * 60_000)
 
+        # Wick's reminders (Candle Premium): checked every minute.
+        self.reminder_timer = QTimer(self)
+        self.reminder_timer.timeout.connect(self.remind)
+        self.reminder_timer.start(60_000)
+        self._reminded = {}
+
+        self.goals_view.set_premium(self.premium)
         self._show_welcome()
 
     # -- menus ------------------------------------------------------------
@@ -360,6 +375,7 @@ class MainWindow(QMainWindow):
         self.update_status()
         self._refresh_recent()
         self.cloud_sync()
+        self.check_premium()
 
     def close_project(self):
         if self.project is None:
@@ -468,10 +484,50 @@ class MainWindow(QMainWindow):
         self.settings.setValue("cloud/refresh_token", self.session.refresh_token)
         self.statusBar().showMessage(f"Signed in as {self.session.email}", 6000)
         self.cloud_backup(quiet=True)
+        self.check_premium()
 
     def sign_out(self):
         self.session = None
         self.settings.remove("cloud")
+        self._set_premium(False)
+
+    def check_premium(self):
+        """Goals are Premium: ask the account (remembered for when Candle is offline)."""
+        session = self.session
+        if session is None:
+            return self._set_premium(False)
+
+        def checked(me):
+            if session is self.session:
+                self._set_premium(bool(me.get("premium")))
+
+        run_async(session.me, checked, lambda exc: None)
+
+    def _set_premium(self, premium):
+        self.premium = premium
+        self.settings.setValue("cloud/premium", premium)
+        self.goals_view.set_premium(premium)
+        if self.project is not None:
+            self.goals_view.reload()
+            self.update_status()
+
+    def remind(self):
+        """Once a day, at the time the writer chose, if today's goal isn't met yet."""
+        p = self.project
+        if p is None or not self.premium:
+            return
+        goals = coach.parse_goals(p.get_meta("goals", ""))
+        now = datetime.datetime.now()
+        key, today = str(p.path), now.date()
+        if not goals["remind_at"] or self._reminded.get(key) == today or f"{now:%H:%M}" < goals["remind_at"]:
+            return
+        self._reminded[key] = today
+        if p.get_meta("reminded", "") == today.isoformat():
+            return   # already, in an earlier session today
+        p.set_meta("reminded", today.isoformat())
+        s = coach.for_project(p)
+        if not s.met_today and s.kind not in ("finished", "rest"):
+            notify(f"{p.title} — Candle", s.message)
 
     def open_dashboard(self):
         # Every backup version to download, and KDP files, in the browser.
@@ -485,6 +541,7 @@ class MainWindow(QMainWindow):
     def show_premium(self):
         dialog = PremiumDialog(self.session, self)
         dialog.exec()
+        self.check_premium()
         if dialog.wants_sign_in:
             self.sign_in()
             if self.session is not None:
@@ -655,7 +712,13 @@ class MainWindow(QMainWindow):
         today = p.words_today()
         goal = int(p.get_meta("daily_goal", 0) or 0)
         today_text = f"today {today:+,}" + (f" / {goal:,}" if goal else "")
-        self.words_label.setText(f"{p.total_words():,} words  ·  {today_text}  ")
+        streak = ""
+        if self.premium:
+            s = coach.for_project(p)
+            streak = f"  ·  🔥 {s.streak_text}" if s.streak else ""
+            if self.pages.currentWidget() is self.goals_view:
+                self.goals_view.refresh()
+        self.words_label.setText(f"{p.total_words():,} words  ·  {today_text}{streak}  ")
         self.setWindowTitle(f"{p.title} — {APP_NAME}")
 
     # -- full view and focus mode -----------------------------------------

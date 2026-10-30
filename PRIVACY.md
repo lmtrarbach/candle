@@ -53,6 +53,14 @@ computer, and why:
   the web dashboard (rather than in Candle), the service reads the backup you
   chose, which is already stored there, lays it out, and sends you the PDF.
   The PDF isn't kept. In Candle itself, the book is laid out on your computer.
+- **Goals and reminders.** Your goals (daily goal, days a week, deadline,
+  reminder time) are saved in the project file, so they're in its backups.
+  If you turn on reminders in your browser, the service keeps that browser's
+  push address (given by its maker: Google, Mozilla, Apple or Microsoft), its
+  time zone and the reminder time of each project, to send the reminder.
+  At that time it reads the project's latest backup to see whether you've met
+  the day's goal; the reminder contains only Wick's message and the project's
+  title. Turning the reminder off, or deleting your account, deletes them.
 - **Basic request logs** (time, address, and which request was made, but never
   the contents of your projects), kept by Google Cloud for running and securing
   the service.
@@ -65,6 +73,16 @@ deletes your account and every cloud backup straight away. Deleted backups
 stay recoverable by the developer for up to 30 days, as a protection against
 mistakes, and are then gone for good. You can also delete the backups of one
 project from **Account → Restore from cloud…**.
+
+## The website (candlewriter.com)
+
+The landing page at candlewriter.com can use Google Analytics to count
+visits and see which links are used (for example, which download button).
+It only does so if you choose **Accept** when it asks; choose **No thanks**
+and nothing is loaded. Your choice is kept in your browser, and **Cookie
+settings** at the bottom of the page lets you change it. Google Analytics
+isn't used in Candle, in Candle on the web, on your account page or on
+review pages, where your writing is.
 
 ## Changes to this policy
 

@@ -136,6 +136,12 @@ password, then hands you back to the app.
   page numbers, and fonts are embedded. Upload it with **No bleed** and order
   a proof copy before publishing. The book is laid out on your computer; it is
   never uploaded.
+- **Goals, with Wick:** the **Goals** page sets a daily goal in words or pages,
+  how many days a week you write, a target length and a deadline. Wick, your
+  writing companion, keeps your streak, works out the pace your deadline
+  needs, cheers when you get there, and reminds you at the time you choose if
+  you haven't (a desktop notification while Candle is open; Candle on the web
+  can also remind you in your browser).
 - **Web dashboard:** **Account → Open web dashboard** opens your account in the
   browser, from any computer: every backup version of every project to
   download, a KDP paperback PDF from any version, and your subscription.

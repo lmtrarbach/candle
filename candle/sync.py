@@ -23,6 +23,8 @@ from . import richtext
 META_KEYS = ("title", "author", "language", "target_words", "daily_goal",
              "arch_premise", "arch_fabula", "arch_setting", "arch_themes", "arch_notes")
 RICH_META = {k for k in META_KEYS if k.startswith("arch_")}
+# Added later: part of the hash only once set, so files synced before still match.
+LATER_META = ("goals",)
 TABLES = {
     # table: (columns, rich-text columns), rows ordered by their key columns
     "chapters": ("id, title, reason, notes, position", {"reason", "notes"}),
@@ -53,6 +55,9 @@ def fingerprint(project):
         value = meta.get(key)
         value = _text(value) if key in RICH_META else ("" if value is None else str(value))
         h.update(json.dumps(["meta", key, value]).encode())
+    for key in LATER_META:
+        if meta.get(key):
+            h.update(json.dumps(["meta", key, meta[key]]).encode())
     for table, (columns, rich) in TABLES.items():
         names = [c.strip() for c in columns.split(",")]
         for row in project.conn.execute(f"SELECT {columns} FROM {table} ORDER BY {columns}"):
