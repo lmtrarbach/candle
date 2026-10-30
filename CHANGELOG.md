@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-10-30
 
 ### Goals, with Wick, your writing companion (Candle Premium)
 
@@ -18,6 +18,12 @@
 - **Reminders.** At the time you choose, if you haven't met the day's goal
   yet: a desktop notification while Candle is open, and in Candle on the web,
   a browser notification even when it's closed.
+
+### Candle Premium
+
+- **Free trial.** First-time subscribers get 7 days of Premium free: **Account
+  → Candle Premium…** offers it, and while it lasts shows when it ends and how
+  to cancel without being charged.
 
 ## 0.2.0 — 2026-10-28
 

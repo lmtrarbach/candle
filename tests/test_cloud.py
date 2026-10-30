@@ -364,3 +364,22 @@ def test_no_kdp_option_without_the_service(qapp, tmp_path, monkeypatch):
         assert overview.ExportDialog(book).format.findData("kdp") == -1
     finally:
         book.close()
+
+
+def test_premium_window_offers_the_free_trial(qapp, servers):
+    from candle import account
+    servers.me = {**servers.me, "trial_days": 7}
+    dialog = account.PremiumDialog(signed_in())
+    try:
+        assert wait_for(lambda: dialog.plan_buttons)
+        assert [b.text() for b in dialog.plan_buttons] == ["Free trial, then US$36 / year", "Free trial, then US$4 / month"]
+        assert "free for 7 days" in dialog.status.text() and "Goals, with Wick" in dialog.features.text()
+    finally:
+        dialog.close()
+    servers.me = {**servers.me, "premium": True, "plans": [], "trial_ends": "2027-01-01T12:00:00+00:00"}
+    dialog = account.PremiumDialog(signed_in())
+    try:
+        assert wait_for(lambda: "free trial" in dialog.status.text())
+        assert "January 2027" in dialog.status.text() and dialog.plan_buttons == []
+    finally:
+        dialog.close()
