@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Goals, with Wick, your writing companion (Candle Premium)
+
+- **Goals page.** Set a daily goal in words or pages (250 words a page), how
+  many days a week you write, a target length and a deadline. Goals are saved
+  in the project, so Candle on the web shows the same ones.
+- **Wick** keeps you going: a small candle whose flame burns bright when
+  you've met the day's goal and flickers when your streak is at risk. It
+  cheers, nudges and welcomes you back, with a new line each day.
+- **Streaks.** Days in a row you've met your goal (shown in the status bar),
+  or weeks in a row if you write on fewer than seven days a week, and this
+  week at a glance.
+- **Deadlines.** Wick works out how much you need to write each day to reach
+  your target length by the date you chose.
+- **Reminders.** At the time you choose, if you haven't met the day's goal
+  yet: a desktop notification while Candle is open, and in Candle on the web,
+  a browser notification even when it's closed.
+
 ## 0.2.0 — 2026-10-28
 
 ### Candle Premium (optional subscription)
