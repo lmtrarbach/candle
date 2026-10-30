@@ -1,7 +1,7 @@
 <p align="center"><img src="candle/resources/candle.png" width="128" alt="Candle icon: a lit candle with a quill"></p>
 
 # Candle
-
+[Candle](https://app.candlewriter.com/welcome)
 **A quiet place to write your novel.** Candle is free, open-source software for
 planning and writing novels on Linux, Windows and macOS. It is inspired by
 [bibisco](https://bibisco.com): you plan the story's architecture, build your
@@ -10,7 +10,7 @@ by scene.
 
 No ads, no account needed. Your novels stay on your computer, unless you choose
 optional [Candle Premium](#candle-premium-optional) cloud backup.
-[Premium](https://app.candlewriter.com)
+
 ## Install
 
 ### Linux (Snap)
