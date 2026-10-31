@@ -72,6 +72,11 @@ LINES = {
         "I saved you a seat. {goal} today and we start a new streak.",
         "Welcome back. The best day to restart is the one you're in.",
     ],
+    "first": [
+        "A new story! {goal} today and the first page is yours.",
+        "Every book starts with one sentence. {goal} is today's goal.",
+        "Welcome to a fresh page. Let's see where {goal} takes you today.",
+    ],
     "morning": [
         "Good morning. {goal} today — a coffee's worth of writing.",
         "A fresh page and a whole day. {goal} is today's goal.",
@@ -238,7 +243,9 @@ def _kind(s, today, hour):
         return "rest", "glow"
     if s.today_words > 0 and s.today_goal:
         return ("close" if s.today_words * 2 >= s.today_goal else "started"), "glow"
-    if s.last_written is None or (today - s.last_written).days >= 3:
+    if s.last_written is None:
+        return "first", "glow"            # nothing written yet: a beginning, not a comeback
+    if (today - s.last_written).days >= 3:
         return "comeback", "sleepy"
     if s.streak and hour >= 17:
         return "at_risk", "flicker"
