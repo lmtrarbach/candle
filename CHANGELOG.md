@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 — 2026-10-31
 
 - **Wick is now Lighter.** One writing companion, Lighter, keeps you going with
   your goals (and, on the web, asks small questions about your story). On the
@@ -10,6 +10,12 @@
   latest version of each project, and you can write your projects on the web.
   The Premium window lists what Premium adds: Lighter, the latest 20 versions
   of every project, Amazon KDP paperbacks and reviews.
+- **A fresh start.** On a project with nothing written yet, Lighter welcomes
+  you to a new page instead of saying it's been a while.
+- **Deleted on the web, not brought back.** A project you delete on the web
+  waits 7 days in the bin, where you can restore it from your account page.
+  Meanwhile Candle doesn't back it up again; **Back up to cloud now** says it's
+  in the bin.
 
 ## 0.3.0 — 2026-10-30
 
