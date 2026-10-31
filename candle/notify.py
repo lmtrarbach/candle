@@ -1,4 +1,4 @@
-"""Desktop notifications, for Wick's reminders (see coach.py)."""
+"""Desktop notifications, for Lighter's reminders (see coach.py)."""
 
 import sys
 from pathlib import Path
@@ -37,5 +37,5 @@ def _freedesktop(title, body):
                             "org.freedesktop.portal.Notification", bus)
     if not portal.isValid():
         return False
-    reply = portal.call(QDBus.CallMode.Block, "AddNotification", "wick", {"title": title, "body": body})
+    reply = portal.call(QDBus.CallMode.Block, "AddNotification", "lighter", {"title": title, "body": body})
     return not reply.errorName()

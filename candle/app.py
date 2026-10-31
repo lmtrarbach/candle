@@ -242,7 +242,7 @@ class MainWindow(QMainWindow):
         self.cloud_timer.timeout.connect(lambda: self.cloud_backup(quiet=True))
         self.cloud_timer.start(60 * 60_000)
 
-        # Wick's reminders (Candle Premium): checked every minute.
+        # Lighter's goal reminders (Candle Premium): checked every minute.
         self.reminder_timer = QTimer(self)
         self.reminder_timer.timeout.connect(self.remind)
         self.reminder_timer.start(60_000)

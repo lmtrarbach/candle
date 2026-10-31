@@ -111,9 +111,12 @@ project. **Help → About Candle** shows the backup folder on your system.
 
 ## Candle Premium (optional)
 
-Candle itself is free. **Candle Premium** is an optional subscription,
-**US$4 a month or US$36 a year**, that adds cloud backup and print-ready
-Amazon KDP paperback files. **Account → Candle Premium…** explains it and
+Candle itself is free, and so is a Candle account: sign in to back up your
+projects (the latest version of each) and to write them on the web at
+[candlewriter.com](https://candlewriter.com). **Candle Premium** is an optional
+subscription, **US$4 a month or US$36 a year** with a 7-day free trial, that
+adds Lighter, your writing companion; the latest 20 versions of every project;
+reviews; and print-ready Amazon KDP paperback files. **Account → Candle Premium…** explains it and
 opens a secure Stripe checkout page; **Manage subscription…** lets you switch
 plans, change your card or cancel at any time. Payments are handled by
 Stripe; Candle never sees your card details.
@@ -123,8 +126,8 @@ opens a Candle page where you continue with Google or with an email and
 password, then hands you back to the app.
 
 - Each project is backed up when you open it, every hour while it's open, and
-  whenever you choose **Account → Back up to cloud now**. The latest 20 backups
-  of each project are kept.
+  whenever you choose **Account → Back up to cloud now**. Premium keeps the
+  latest 20 versions of each project; a free account keeps the latest one.
 - **Account → Restore from cloud…** saves any backup as a new `.candle` file;
   it never overwrites a file.
 - Backups sit in a private folder only your account can open. Deleting your
@@ -136,12 +139,13 @@ password, then hands you back to the app.
   page numbers, and fonts are embedded. Upload it with **No bleed** and order
   a proof copy before publishing. The book is laid out on your computer; it is
   never uploaded.
-- **Goals, with Wick:** the **Goals** page sets a daily goal in words or pages,
-  how many days a week you write, a target length and a deadline. Wick, your
-  writing companion, keeps your streak, works out the pace your deadline
+- **Lighter, your writing companion (Premium):** the **Goals** page sets a
+  daily goal in words or pages, how many days a week you write, a target length
+  and a deadline. Lighter keeps your streak, works out the pace your deadline
   needs, cheers when you get there, and reminds you at the time you choose if
   you haven't (a desktop notification while Candle is open; Candle on the web
-  can also remind you in your browser).
+  can also remind you in your browser). On the web, Lighter also asks small
+  questions about your story, and offers to save the answers you like.
 - **Web dashboard:** **Account → Open web dashboard** opens your account in the
   browser, from any computer: every backup version of every project to
   download, a KDP paperback PDF from any version, and your subscription.

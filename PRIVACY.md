@@ -59,7 +59,7 @@ computer, and why:
   push address (given by its maker: Google, Mozilla, Apple or Microsoft), its
   time zone and the reminder time of each project, to send the reminder.
   At that time it reads the project's latest backup to see whether you've met
-  the day's goal; the reminder contains only Wick's message and the project's
+  the day's goal; the reminder contains only Lighter's message and the project's
   title. Turning the reminder off, or deleting your account, deletes them.
 - **Basic request logs** (time, address, and which request was made, but never
   the contents of your projects), kept by Google Cloud for running and securing

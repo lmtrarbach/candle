@@ -1,4 +1,4 @@
-"""Goals (Candle Premium): Wick, the writing companion, and the writer's goals."""
+"""Goals (Candle Premium): Lighter, the writing companion, and the writer's goals."""
 
 import datetime
 import math
@@ -18,8 +18,9 @@ FLAME = {"proud": ("#f2a33a", "#ffd77a", 1.0), "glow": ("#e98f2e", "#ffcf6e", 0.
          "flicker": ("#d9732a", "#f7b45c", 0.6), "sleepy": ("#b9824c", "#e6c08a", 0.42)}
 
 
-class Wick(QWidget):
-    """The companion: a candle whose flame shows how the writing is going."""
+class LighterFigure(QWidget):
+    """The companion: an open lighter whose flame shows how the writing is going
+    (the lid shut when the writer has been away)."""
 
     def __init__(self):
         super().__init__()
@@ -41,41 +42,60 @@ class Wick(QWidget):
 
     def paintEvent(self, event):
         outer, inner, size = FLAME.get(self.mood, FLAME["glow"])
+        sleepy = self.mood == "sleepy"
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pal = self.palette()
-        # The candle, with a face.
-        body = QRectF(30, 64, 36, 58)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor("#f6efe2"))
-        p.drawRoundedRect(body, 8, 8)
-        p.setBrush(QColor("#e7dcc8"))
-        p.drawRoundedRect(QRectF(30, 64, 36, 9), 5, 5)
-        ink = pal.color(QPalette.ColorRole.Text) if self.mood != "sleepy" else QColor("#8d8a84")
+        metal, shade, edge = QColor("#d8d2c6"), QColor("#c4bcad"), QColor("#8d8576")
+        p.setPen(edge)
+        # The lid: upright on its hinge, or shut over the chimney.
+        p.setBrush(shade)
+        if sleepy:
+            p.drawRoundedRect(QRectF(20, 48, 50, 24), 6, 6)
+        else:
+            lid = QPainterPath(QPointF(70, 72))
+            lid.lineTo(72, 32)
+            lid.quadTo(72.5, 28, 76.5, 28.5)
+            lid.lineTo(86, 30)
+            lid.quadTo(90, 30.6, 89.5, 34.5)
+            lid.lineTo(84, 72)
+            lid.closeSubpath()
+            p.drawPath(lid)
+            # The chimney, with its holes.
+            p.setBrush(metal)
+            p.drawRoundedRect(QRectF(27, 52, 36, 20), 2, 2)
+            p.setBrush(edge)
+            for x in (36, 45, 54):
+                for y in (58, 65):
+                    p.drawEllipse(QPointF(x, y), 1.6, 1.6)
+        # The body, with a face.
+        p.setBrush(metal)
+        p.drawRoundedRect(QRectF(20, 72, 50, 50), 7, 7)
+        p.drawLine(QPointF(20, 83), QPointF(70, 83))
+        ink = self.palette().color(QPalette.ColorRole.Text) if not sleepy else QColor("#8d8a84")
         p.setPen(ink)
         p.setBrush(ink)
-        if self.mood == "sleepy":
-            p.drawLine(QPointF(39, 88), QPointF(45, 88))
-            p.drawLine(QPointF(51, 88), QPointF(57, 88))
+        if sleepy:
+            p.drawLine(QPointF(34, 98), QPointF(40, 98))
+            p.drawLine(QPointF(50, 98), QPointF(56, 98))
         else:
-            p.drawEllipse(QPointF(42, 87), 2.4, 2.8)
-            p.drawEllipse(QPointF(54, 87), 2.4, 2.8)
-        mouth = QPainterPath(QPointF(43, 96))
+            p.drawEllipse(QPointF(37, 97), 2.4, 2.8)
+            p.drawEllipse(QPointF(53, 97), 2.4, 2.8)
+        mouth = QPainterPath(QPointF(40, 106))
         lift = {"proud": 6, "glow": 3, "flicker": -2, "sleepy": 0}[self.mood]
-        mouth.quadTo(QPointF(48, 96 + lift), QPointF(53, 96))
+        mouth.quadTo(QPointF(45, 106 + lift), QPointF(50, 106))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawPath(mouth)
-        # The wick and its flame, swaying a little.
-        p.setPen(QColor("#5a4630"))
-        p.drawLine(QPointF(48, 64), QPointF(48, 57))
+        if sleepy:
+            return
+        # The flame, swaying a little.
         sway = math.sin(self.phase) * 2.2 * size
         h = 46 * size
         for colour, scale in ((outer, 1.0), (inner, 0.55)):
-            path = QPainterPath(QPointF(48, 60))
-            path.cubicTo(QPointF(48 - 14 * scale * size, 60 - h * 0.25 * scale), QPointF(48 - 6 * scale, 60 - h * 0.75 * scale),
-                         QPointF(48 + sway, 60 - h * scale))
-            path.cubicTo(QPointF(48 + 6 * scale, 60 - h * 0.75 * scale), QPointF(48 + 14 * scale * size, 60 - h * 0.25 * scale),
-                         QPointF(48, 60))
+            path = QPainterPath(QPointF(45, 53))
+            path.cubicTo(QPointF(45 - 14 * scale * size, 53 - h * 0.25 * scale), QPointF(45 - 6 * scale, 53 - h * 0.75 * scale),
+                         QPointF(45 + sway, 53 - h * scale))
+            path.cubicTo(QPointF(45 + 6 * scale, 53 - h * 0.75 * scale), QPointF(45 + 14 * scale * size, 53 - h * 0.25 * scale),
+                         QPointF(45, 53))
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QColor(colour))
             p.drawPath(path)
@@ -89,8 +109,8 @@ class GoalsView(View):
         self.premium = False
         self.saver = Debouncer(self.save)
 
-        # Wick and what it says.
-        self.wick = Wick()
+        # Lighter and what it says.
+        self.figure = LighterFigure()
         self.message = QLabel()
         self.message.setObjectName("coachMessage")
         self.message.setWordWrap(True)
@@ -107,7 +127,7 @@ class GoalsView(View):
         card = QFrame()
         card.setObjectName("card")
         row = QGridLayout(card)
-        row.addWidget(self.wick, 0, 0, 2, 1)
+        row.addWidget(self.figure, 0, 0, 2, 1)
         row.addLayout(talk, 0, 1)
         row.setColumnStretch(1, 1)
 
@@ -180,9 +200,9 @@ class GoalsView(View):
         # Without Premium: what Goals are, and where to get them.
         self.locked = QFrame()
         self.locked.setObjectName("card")
-        about = QLabel("<b>Meet Wick, your writing companion.</b><br><br>"
+        about = QLabel("<b>Meet Lighter, your writing companion.</b><br><br>"
                        "Set a daily goal in words or pages, how many days a week you write, and a deadline. "
-                       "Wick keeps your streak, works out the pace you need, cheers when you get there and "
+                       "Lighter keeps your streak, works out the pace you need, cheers when you get there and "
                        "reminds you when you haven't — here and in Candle on the web.<br><br>"
                        "Goals are part of <b>Candle Premium</b>.")
         about.setWordWrap(True)
@@ -209,9 +229,9 @@ class GoalsView(View):
         self.goals.setVisible(premium)
         self.locked.setVisible(not premium)
         if premium:
-            self.wick.timer.start(90)
+            self.figure.timer.start(90)
         else:
-            self.wick.timer.stop()
+            self.figure.timer.stop()
 
     # -- loading and saving ------------------------------------------------
     def _pages(self):
@@ -294,12 +314,12 @@ class GoalsView(View):
     def flush(self):
         self.saver.flush()
 
-    # -- Wick ----------------------------------------------------------------
+    # -- Lighter ---------------------------------------------------------------
     def refresh(self):
         if self.project is None or not self.premium:
             return
         s = coach.for_project(self.project)
-        self.wick.set_mood(s.mood)
+        self.figure.set_mood(s.mood)
         self.message.setText(s.message)
         self.pace.setText(s.pace_text)
         self.pace.setVisible(bool(s.pace_text))

@@ -1,4 +1,4 @@
-"""Wick, the writing companion (Candle Premium): goals, streaks and nudges.
+"""Lighter, the writing companion (Candle Premium): goals, streaks and nudges.
 
 Everything here comes from what each project already records: its daily goal
 and target length (project meta), the word count each day started with (the
@@ -25,7 +25,7 @@ WORDS_PER_PAGE = 250   # a standard manuscript page
 DEFAULTS = {"unit": "words", "week_days": 7, "deadline": "", "remind_at": ""}
 TIME = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
-# What Wick says. Picked by the writer's day; one line per kind per day, so
+# What Lighter says. Picked by the writer's day; one line per kind per day, so
 # the message doesn't change on every refresh. {goal}, {words}, {left},
 # {streak} and {pace} are amounts in the writer's unit ("1,200 words", "3 pages").
 LINES = {
@@ -162,7 +162,7 @@ class Status:
     days_left: int | None
     last_written: datetime.date | None
     kind: str = ""              # which LINES
-    mood: str = ""              # proud, glow, flicker or sleepy: how Wick looks
+    mood: str = ""              # proud, glow, flicker or sleepy: how Lighter looks
     message: str = ""
 
     @property
@@ -183,7 +183,7 @@ class Status:
 
 
 def status(daily, total, today, daily_goal=0, target=0, goals=None, hour=12):
-    """Where the writer stands today, and what Wick says about it."""
+    """Where the writer stands today, and what Lighter says about it."""
     goals = parse_goals(json.dumps(goals) if isinstance(goals, dict) else goals)
     daily_goal, target = max(int(daily_goal or 0), 0), max(int(target or 0), 0)
     written = written_by_day(daily, total, today)
