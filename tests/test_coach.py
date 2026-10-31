@@ -1,4 +1,4 @@
-"""Wick, the writing companion: goals, streaks, pace and reminders."""
+"""Lighter, the writing companion: goals, streaks, pace and reminders."""
 
 import datetime
 

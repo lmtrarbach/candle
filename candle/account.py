@@ -255,18 +255,17 @@ class PremiumDialog(QDialog):
     """What Candle Premium is, what it costs, and the way to get or manage it."""
 
     FEATURES = [
-        ("☁", "Cloud backup",
+        ("🔥", "Lighter, your writing companion",
+         "Keeps you going: daily goals in words or pages, streaks, the pace your deadline needs, and "
+         "reminders. On the web it also asks small questions that light up your story."),
+        ("☁", "Every version of your projects",
          "Each project is backed up when you open it and every hour while you write. The latest "
-         "{keep} versions of each are kept, and you can restore any of them."),
+         "{keep} versions of each are kept (free accounts keep the latest one)."),
         ("📖", "Print-ready Amazon KDP paperbacks",
          "Export a PDF interior in any of KDP's 16 trim sizes, with the margins KDP requires and "
          "chapters opening on right-hand pages."),
-        ("✍", "Write on the web",
-         "Write your chapters and scenes from any browser. Candle brings the changes in the next "
-         "time you open the project here."),
-        ("🔥", "Goals, with Wick",
-         "Daily goals in words or pages, streaks, a deadline's pace, and reminders from Wick, your "
-         "writing companion."),
+        ("💬", "Reviews",
+         "Share a version with readers you invite; they leave notes on passages and chapters."),
         ("🔒", "Private",
          "Your backups sit in a folder only your account can open. Cancel anytime: your backups "
          "stay downloadable after Premium ends."),
@@ -339,7 +338,8 @@ class PremiumDialog(QDialog):
         self.sign_in_btn.setVisible(True)
 
     def _show_account(self, me):
-        self.features.setText(self._features_html(me["limits"]["backups_per_project"]))
+        self.features.setText(self._features_html(me["limits"].get("premium_backups",
+                                                                     me["limits"]["backups_per_project"])))
         if me["premium"] and me.get("trial_ends"):
             ends = datetime.datetime.fromisoformat(me["trial_ends"]).astimezone()
             self.status.setText(f"<b>You're on a free trial of Candle Premium ✓</b> It ends on {ends:%d %B %Y}, "

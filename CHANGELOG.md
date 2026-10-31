@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Wick is now Lighter.** One writing companion, Lighter, keeps you going with
+  your goals (and, on the web, asks small questions about your story). On the
+  Goals page it's an open lighter whose flame shows how the writing is going;
+  its lid is shut when you've been away a while.
+- **A free account does more.** Signed in without Premium, Candle backs up the
+  latest version of each project, and you can write your projects on the web.
+  The Premium window lists what Premium adds: Lighter, the latest 20 versions
+  of every project, Amazon KDP paperbacks and reviews.
+
 ## 0.3.0 — 2026-10-30
 
 ### Goals, with Wick, your writing companion (Candle Premium)
