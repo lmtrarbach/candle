@@ -38,7 +38,8 @@ def test_daily_streak():
 
 
 def test_coming_back_and_starting_out():
-    assert coach.status({}, 0, TODAY, daily_goal=500).kind == "comeback"
+    s = coach.status({}, 0, TODAY, daily_goal=500)
+    assert (s.kind, s.mood) == ("first", "glow") and "500 words" in s.message   # a new project: a beginning
     long_ago = {"2026-10-01": 0, "2026-10-02": 900}
     s = coach.status(long_ago, 900, TODAY, daily_goal=500)
     assert (s.kind, s.mood, s.last_written) == ("comeback", "sleepy", datetime.date(2026, 10, 1))
