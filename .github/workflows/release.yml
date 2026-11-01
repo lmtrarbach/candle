@@ -64,11 +64,9 @@ jobs:
           path: dist/*.msix
 
   macos:
-    # Paused for now: delete the next line (and add macos back to the release
-    # job's needs and files) to build the macOS .dmg again.
-    if: false
     needs: test
-    runs-on: macos-latest   # Apple Silicon
+    runs-on: macos-15   # Apple Silicon
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -76,6 +74,23 @@ jobs:
           python-version: "3.12"
       - run: pip install . pyinstaller
       - run: pyinstaller packaging/candle.spec --noconfirm
+      # Apple Silicon refuses to run unsigned code, and a partly signed bundle
+      # shows up as "damaged". Without a paid certificate, sign it ad hoc so
+      # macOS offers "Open Anyway" instead.
+      - name: Sign ad hoc
+        run: |
+          codesign --force --deep --sign - dist/Candle.app
+          codesign --verify --deep --strict dist/Candle.app
+      - name: Starts without crashing
+        env:
+          QT_QPA_PLATFORM: offscreen
+          HOME: ${{ runner.temp }}/home
+        run: |
+          mkdir -p "$HOME"
+          dist/Candle.app/Contents/MacOS/Candle & pid=$!
+          sleep 20
+          kill -0 $pid
+          kill $pid
       - name: Disk image
         run: |
           version=$(python -c "import candle; print(candle.__version__)")
@@ -110,7 +125,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [windows, snap]
+    needs: [windows, macos, snap]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -122,5 +137,6 @@ jobs:
         with:
           files: |
             artifacts/windows/*
+            artifacts/macos/*
             artifacts/snap/*
           generate_release_notes: true
