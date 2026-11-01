@@ -74,6 +74,36 @@ stay recoverable by the developer for up to 30 days, as a protection against
 mistakes, and are then gone for good. You can also delete the backups of one
 project from **Account → Restore from cloud…**.
 
+## Lighter
+
+Lighter, Candle Premium's writing companion, asks small questions about your
+novel, in Candle on the web and in the **Lighter app for Android**. It's off
+until you turn it on for a project. Then:
+
+- **To ask and reply, it uses Gemini, by Google** (on Google Cloud's Vertex
+  AI). Each turn sends Gemini what it needs from that project: its outline,
+  the characters, places or scenes it's asking about, and your conversation.
+  Under Google Cloud's terms, Google doesn't use this to train its models.
+- **The conversation is kept with your account** (in Google Cloud Firestore),
+  so Lighter remembers what you've said: the messages, what it saved or
+  offered to save, which questions it asked lately, and the days you answered
+  (your streak). **New conversation** in Lighter clears the messages; turning
+  Lighter off for a project, deleting the project or deleting your account
+  deletes all of it.
+- **What you tell it is saved into your project.** On the web it goes into
+  the project you have open, with an undo. In the Android app it's saved as a
+  new version of the project, marked "saved by Lighter", which Candle
+  downloads like any other backup.
+- **In the Android app,** you sign in with your Candle account (Google or your
+  email and password, through Google Firebase Authentication); your sign-in
+  stays on the phone and is left out of its backups. The daily question is
+  scheduled on the phone, which fetches it from Candle's service at the time
+  you chose. The app has no ads and no analytics.
+
+**Deleting your account** from the Android app: **Settings → Delete your
+account…** opens your account page at <https://app.candlewriter.com/account>,
+where **Delete my account…** deletes it, as described above.
+
 ## The website (candlewriter.com)
 
 The landing page at candlewriter.com can use Google Analytics to count
