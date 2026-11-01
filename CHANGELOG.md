@@ -2,6 +2,8 @@
 
 ## 0.3.1 — 2026-10-31
 
+- **macOS is back.** Each release includes a `.dmg` for Apple Silicon Macs
+  again.
 - **Wick is now Lighter.** One writing companion, Lighter, keeps you going with
   your goals (and, on the web, asks small questions about your story). On the
   Goals page it's an open lighter whose flame shows how the writing is going;
