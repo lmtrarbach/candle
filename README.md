@@ -38,6 +38,14 @@ from a folder.
 
 ### macOS (Apple Silicon)
 
+With [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask lmtrarbach/candle/candle
+```
+
+`brew upgrade` then keeps Candle up to date. Or install it by hand:
+
 1. Download `Candle-<version>-macos-arm64.dmg` from the
    [latest release](https://github.com/lmtrarbach/candle/releases/latest).
 2. Open it and drag **Candle** into **Applications**.
@@ -219,6 +227,21 @@ the snap to the Snap Store's stable channel. The `.msix` for the Microsoft
 Store is attached to the workflow run (not the release), to upload in Partner
 Center. Store text, screenshots and the privacy policy are in `packaging/store/`
 and `PRIVACY.md`.
+
+### Homebrew (one-time setup)
+
+The Mac cask lives in [lmtrarbach/homebrew-candle](https://github.com/lmtrarbach/homebrew-candle),
+made from `packaging/homebrew/candle.rb`. After each release the workflow
+writes the new version and checksum there. It needs a token to do that:
+
+1. On GitHub, open **Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens → Generate new token**.
+2. Repository access: **Only select repositories → homebrew-candle**.
+   Permissions: **Contents → Read and write**.
+3. In this repository, open **Settings → Secrets and variables → Actions** and
+   add it as `HOMEBREW_TAP_TOKEN`.
+
+The tag must match `__version__` (`v0.3.2` for `0.3.2`), or the cask step fails.
 
 ### Publishing the snap (one-time setup)
 
