@@ -140,3 +140,34 @@ jobs:
             artifacts/macos/*
             artifacts/snap/*
           generate_release_notes: true
+
+  homebrew:
+    # Points the Homebrew cask at the new .dmg (skipped until the
+    # HOMEBREW_TAP_TOKEN secret exists; see "Homebrew" in the README).
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos
+          path: dmg
+      - name: Update the cask
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        run: |
+          dmg=$(basename dmg/*.dmg)
+          version=${dmg#Candle-}; version=${version%-macos-arm64.dmg}
+          # The cask downloads from the release tagged v<version>.
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in candle/__init__.py"; exit 1
+          fi
+          sha=$(sha256sum "dmg/$dmg" | cut -d' ' -f1)
+          git clone -q "https://x-access-token:$HOMEBREW_TAP_TOKEN@github.com/lmtrarbach/homebrew-candle" tap
+          sed -e "s/{VERSION}/$version/" -e "s/{SHA256}/$sha/" packaging/homebrew/candle.rb > tap/Casks/candle.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/candle.rb
+          git commit -q -m "Candle $version" && git push -q
