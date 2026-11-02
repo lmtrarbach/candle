@@ -564,7 +564,8 @@ class MainWindow(QMainWindow):
             if project is not self.project:
                 return
             latest = backups[0] if backups else None
-            if latest and latest.get("source") == "web" and latest["backup_id"] != project.get_meta("cloud_base"):
+            # Written on the web, or by the Lighter app (what a writer told it, saved into the book).
+            if latest and latest.get("source") in ("web", "lighter") and latest["backup_id"] != project.get_meta("cloud_base"):
                 if self._offer_web_version(project, latest):
                     return   # loading it; the project is reopened and backed up after
             self.cloud_backup(quiet=True)
@@ -575,10 +576,11 @@ class MainWindow(QMainWindow):
     def _offer_web_version(self, project, latest):
         """Ask about a newer version written on the web; True if it's being loaded."""
         when = datetime.datetime.fromisoformat(latest["created"]).astimezone().strftime("%Y-%m-%d %H:%M")
+        where = "by Lighter, from your answers," if latest.get("source") == "lighter" else "in Candle on the web"
         if sync.unchanged_since_sync(project):
             answer = QMessageBox.question(
                 self, "Changes made on the web",
-                f"This book was edited in Candle on the web ({when}).<br><br>Bring those changes in? "
+                f"This book was edited {where} ({when}).<br><br>Bring those changes in? "
                 "This file hasn't changed since its last cloud backup, so nothing here is lost; a copy "
                 "of it is kept in Candle's backups first.",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes)
@@ -587,7 +589,7 @@ class MainWindow(QMainWindow):
                 return True
             return False
         box = QMessageBox(QMessageBox.Icon.Warning, "Edited in two places",
-                          f"This book was edited in Candle on the web ({when}), and it also changed here "
+                          f"This book was edited {where} ({when}), and it also changed here "
                           "since then. Nothing is merged automatically.<br><br>"
                           "You can save the web version as a separate file to compare the two.", parent=self)
         save_copy = box.addButton("Save the web version as a file…", QMessageBox.ButtonRole.AcceptRole)

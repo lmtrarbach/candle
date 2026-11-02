@@ -131,7 +131,10 @@ def test_detach_makes_a_separate_project(qapp, tmp_path):
     q.close()
 
 
-def test_opening_brings_in_web_changes(qapp, servers, tmp_path, monkeypatch):
+@pytest.mark.parametrize("source, said", [("web", "edited in Candle on the web"),
+                                          ("lighter", "edited by Lighter, from your answers")])
+def test_opening_brings_in_web_changes(qapp, servers, tmp_path, monkeypatch, source, said):
+    """A newer cloud version written on the web, or by the Lighter app, is offered on opening."""
     from candle import app as app_module
     from candle.app import MainWindow
     p, ch, scene = make(tmp_path)
@@ -141,7 +144,7 @@ def test_opening_brings_in_web_changes(qapp, servers, tmp_path, monkeypatch):
     p.close()
     web_edit(version, scene, ch)
     servers.uploads["https://gcs/obj"] = (version.read_bytes(), {})
-    servers.versions = [{"backup_id": "WEB1", "created": "2026-10-29T10:00:00+00:00", "source": "web", "size": 1},
+    servers.versions = [{"backup_id": "WEB1", "created": "2026-10-29T10:00:00+00:00", "source": source, "size": 1},
                         {"backup_id": "APP1", "created": "2026-10-28T10:00:00+00:00", "source": "app", "size": 1}]
     asked = []
     monkeypatch.setattr(app_module.QMessageBox, "question", lambda *a, **k: asked.append(a[2]) or
@@ -152,7 +155,7 @@ def test_opening_brings_in_web_changes(qapp, servers, tmp_path, monkeypatch):
     try:
         window.open_project(str(path))
         assert wait_for(lambda: window.project and "rain" in window.project.get("scenes", scene)["content"])
-        assert "edited in Candle on the web" in asked[0]
+        assert said in asked[0]
         assert wait_for(lambda: window.project.get_meta("cloud_base") == "B1")   # then backed up again
         assert window.project.get("scenes", scene)["notes"] == "my notes"
         assert len(asked) == 1                                            # not asked again after reloading
