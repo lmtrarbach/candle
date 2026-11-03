@@ -20,7 +20,7 @@ candle = "candle.app:main"
 packages = ["candle", "candle.views"]
 
 [tool.setuptools.package-data]
-candle = ["resources/*"]
+candle = ["resources/*", "resources/i18n/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

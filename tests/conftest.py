@@ -8,6 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 _sandbox = tempfile.mkdtemp(prefix="candle-tests-")
 os.environ["XDG_CONFIG_HOME"] = os.path.join(_sandbox, "config")
 os.environ["XDG_DATA_HOME"] = os.path.join(_sandbox, "data")
+os.environ["CANDLE_LANG"] = "en"   # the tests check English texts, whatever this computer's language
 
 
 @pytest.fixture(scope="session")

@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QSplitter, QStackedWidget, QVBoxLayout, QWidget,
 )
 
+from ..i18n import t
 from ..widgets import Debouncer, RichEditor, heading, hbox
 
 
@@ -40,10 +41,11 @@ class EntityView(View):
     """List of named entities on the left, editor for the selected one on the right."""
 
     table = ""
-    singular = ""
     plural = ""
     intro = ""
     extra_fields = ()   # (column, label, placeholder)
+    # Whole sentences for each kind: other languages can't drop a noun into one English sentence.
+    add_label = choose = describe = new_name = this = delete_title = ""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -63,15 +65,15 @@ class EntityView(View):
         self.list = QListWidget()
         self.list.currentItemChanged.connect(self._selected)
         lv.addWidget(self.list, 1)
-        add = QPushButton(f"Add {self.singular}")
+        add = QPushButton(self.add_label)
         add.clicked.connect(self.add)
-        delete = QPushButton("Delete")
+        delete = QPushButton(t("Delete"))
         delete.clicked.connect(self.delete)
         up = QPushButton("↑")
-        up.setToolTip("Move up")
+        up.setToolTip(t("Move up"))
         up.clicked.connect(lambda: self.move(-1))
         down = QPushButton("↓")
-        down.setToolTip("Move down")
+        down.setToolTip(t("Move down"))
         down.clicked.connect(lambda: self.move(1))
         for b in (up, down):
             b.setMaximumWidth(36)
@@ -82,7 +84,7 @@ class EntityView(View):
         fv = QVBoxLayout(self.form)
         self.name = QLineEdit()
         self.name.setObjectName("titleEdit")
-        self.name.setPlaceholderText(f"{self.singular.capitalize()} name")
+        self.name.setPlaceholderText(t("Name"))
         self.name.textEdited.connect(self._name_edited)
         fv.addWidget(self.name)
         fields = QFormLayout()
@@ -98,7 +100,7 @@ class EntityView(View):
             fv.addLayout(fields)
         fv.addWidget(self.build_body(), 1)
 
-        empty = QLabel(f"Select a {self.singular} on the left, or add a new one.")
+        empty = QLabel(self.choose)
         empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         empty.setObjectName("hint")
         self.right = QStackedWidget()
@@ -119,7 +121,7 @@ class EntityView(View):
         pass
 
     def build_body(self):
-        self.description = RichEditor(f"Describe this {self.singular}…")
+        self.description = RichEditor(self.describe)
         self.description.changed.connect(self.saver.poke)
         return self.description
 
@@ -130,7 +132,7 @@ class EntityView(View):
         return {}
 
     def label(self, row):
-        return row["name"] or "(unnamed)"
+        return row["name"] or t("(unnamed)")
 
     # -- behaviour --------------------------------------------------------
     def reload(self):
@@ -177,7 +179,7 @@ class EntityView(View):
     def _name_edited(self):
         item = self.list.currentItem()
         if item:
-            item.setText(self.name.text() or "(unnamed)")
+            item.setText(self.name.text() or t("(unnamed)"))
         self.saver.poke()
 
     def flush(self):
@@ -196,7 +198,7 @@ class EntityView(View):
 
     def add(self):
         self.flush()
-        row_id = self.project.insert(self.table, name=f"New {self.singular}")
+        row_id = self.project.insert(self.table, name=self.new_name)
         self.current_id = None
         self.reload()
         self.select(row_id)
@@ -206,8 +208,8 @@ class EntityView(View):
     def delete(self):
         if self.current_id is None:
             return
-        name = self.name.text() or f"this {self.singular}"
-        if not confirm(self, f"Delete {self.singular}", f"Delete “{name}”? This cannot be undone."):
+        name = self.name.text() or self.this
+        if not confirm(self, self.delete_title, t("Delete “{name}”? This cannot be undone.", name=name)):
             return
         self.saver.timer.stop()
         self.project.delete(self.table, self.current_id)

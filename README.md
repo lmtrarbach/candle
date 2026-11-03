@@ -114,6 +114,14 @@ choose where it lives, and Candle saves as you type. Each time you open a
 project, Candle also writes a timestamped backup and keeps the last 10 per
 project. **Help → About Candle** shows the backup folder on your system.
 
+## Languages
+
+Candle speaks English, French, Spanish, Portuguese (Brazil), German, Italian, Dutch, Hindi,
+Simplified Chinese and Japanese. It follows your computer's language; **View → Language**
+changes it (after a restart). Japanese is horizontal writing (yokogaki) only: the editor
+doesn't do vertical text (tategaki). In Chinese and Japanese, which are written without
+spaces, each character counts as a word, as in word processors.
+
 ## Candle Premium (optional)
 
 Candle itself is free, and so is a Candle account: sign in to back up your
@@ -198,10 +206,15 @@ candle/
   export.py       md / html / txt / odt / pdf / docx / epub writers
   widgets.py      rich text editor, check lists, autosave debouncer
   questions.py    character interview and architecture prompts
+  i18n.py         the writer's language: t("…") and tn(n, …) look texts up in
+                  resources/i18n/<language>.json (English is the key and the fallback)
   views/          one module per section of the app
 packaging/        PyInstaller recipe, Windows installer script, icons
 snap/             Snap Store package
 ```
+
+A new English text needs its translations: `python -m tests.i18n_keys fr` lists what
+`fr.json` lacks, and `tests/test_i18n.py` fails until every language has it.
 
 To change the icon, edit `candle/resources/candle.svg` and run
 `python packaging/make_icons.py` (needs Pillow).

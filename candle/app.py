@@ -13,10 +13,11 @@ from PySide6.QtWidgets import (
     QMainWindow, QMessageBox, QPushButton, QStackedWidget, QStyleFactory, QVBoxLayout, QWidget,
 )
 
-from . import __version__, cloud, coach, sync
+from . import __version__, cloud, coach, i18n, sync
 from .about import AboutDialog
 from .account import AccountDialog, PremiumDialog, RestoreDialog, SignInDialog, run_async
 from .db import Project
+from .i18n import number, t, tn
 from .notify import notify
 from .views.chapters import ChaptersView
 from .views.entities import CharactersView, LocationsView, ObjectsView
@@ -26,7 +27,7 @@ from .widgets import Debouncer, hbox
 
 APP_NAME = "Candle"
 EXTENSION = ".candle"
-FILE_FILTER = f"Candle projects (*{EXTENSION})"
+FILE_FILTER = t("Candle projects ({pattern})", pattern=f"*{EXTENSION}")
 MAX_RECENT = 8
 ICON = Path(__file__).parent / "resources" / "candle.png"
 
@@ -113,17 +114,17 @@ class WelcomePage(QWidget):
         self.window_ = window
         title = QLabel(APP_NAME)
         title.setObjectName("welcomeTitle")
-        tag = QLabel("A quiet place to write your novel.")
+        tag = QLabel(t("A quiet place to write your novel."))
         tag.setObjectName("welcomeTag")
-        new = QPushButton("New project…")
+        new = QPushButton(t("New project…"))
         new.setObjectName("primary")
         new.clicked.connect(window.new_project)
-        open_ = QPushButton("Open project…")
+        open_ = QPushButton(t("Open project…"))
         open_.clicked.connect(window.open_dialog)
         self.recent = QListWidget()
         self.recent.setMaximumHeight(220)
         self.recent.itemActivated.connect(lambda item: window.open_project(item.data(Qt.ItemDataRole.UserRole)))
-        self.recent_label = QLabel("Recent projects")
+        self.recent_label = QLabel(t("Recent projects"))
         self.recent_label.setObjectName("hint")
 
         inner = QWidget()
@@ -137,8 +138,7 @@ class WelcomePage(QWidget):
         v.addWidget(self.recent_label)
         v.addWidget(self.recent)
         v.addSpacing(24)
-        free = QLabel("Candle is free and open source, inspired by bibisco. "
-                      "<a href='about'>About &amp; donations</a>")
+        free = QLabel(t("Candle is free and open source, inspired by bibisco. <a href='about'>About &amp; donations</a>"))
         free.setObjectName("hint")
         free.setWordWrap(True)
         free.linkActivated.connect(lambda _: window.show_about())
@@ -174,15 +174,15 @@ class MainWindow(QMainWindow):
         self.welcome = WelcomePage(self)
 
         self.views = [
-            ("Project", ProjectView()),
-            ("Architecture", ArchitectureView()),
-            ("Chapters", ChaptersView()),
-            ("Characters", CharactersView()),
-            ("Locations", LocationsView()),
-            ("Objects", ObjectsView()),
-            ("Timeline", TimelineView()),
-            ("Analysis", AnalysisView()),
-            ("Goals", GoalsView()),
+            (t("Project"), ProjectView()),
+            (t("Architecture"), ArchitectureView()),
+            (t("Chapters"), ChaptersView()),
+            (t("Characters"), CharactersView()),
+            (t("Locations"), LocationsView()),
+            (t("Objects"), ObjectsView()),
+            (t("Timeline"), TimelineView()),
+            (t("Analysis"), AnalysisView()),
+            (t("Goals"), GoalsView()),
         ]
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
@@ -219,8 +219,8 @@ class MainWindow(QMainWindow):
 
         self.save_label = QLabel()
         self.save_label.setObjectName("hint")
-        self.save_button = QPushButton("Save")
-        self.save_button.setToolTip("Save now (Ctrl+S). Candle also saves automatically as you write.")
+        self.save_button = QPushButton(t("Save"))
+        self.save_button.setToolTip(t("Save now (Ctrl+S). Candle also saves automatically as you write."))
         self.save_button.clicked.connect(self.save_now)
         self.words_label = QLabel()
         for widget in (self.save_label, self.save_button, self.words_label):
@@ -254,24 +254,24 @@ class MainWindow(QMainWindow):
     # -- menus ------------------------------------------------------------
     def _build_menus(self):
         bar = self.menuBar()
-        file = bar.addMenu("&File")
-        file.addAction("&New project…", QKeySequence.StandardKey.New, self.new_project)
-        file.addAction("&Open project…", QKeySequence.StandardKey.Open, self.open_dialog)
-        self.recent_menu = file.addMenu("Open &recent")
+        file = bar.addMenu(t("&File"))
+        file.addAction(t("&New project…"), QKeySequence.StandardKey.New, self.new_project)
+        file.addAction(t("&Open project…"), QKeySequence.StandardKey.Open, self.open_dialog)
+        self.recent_menu = file.addMenu(t("Open &recent"))
         file.addSeparator()
-        self.save_action = file.addAction("&Save", QKeySequence.StandardKey.Save, self.save_now)
+        self.save_action = file.addAction(t("&Save"), QKeySequence.StandardKey.Save, self.save_now)
         self.project_actions = [
-            file.addAction("&Export manuscript…", QKeySequence("Ctrl+Shift+E"), self.export),
-            file.addAction("&Back up now", self.backup_now),
-            file.addAction("&Close project", QKeySequence("Ctrl+W"), self.close_project),
+            file.addAction(t("&Export manuscript…"), QKeySequence("Ctrl+Shift+E"), self.export),
+            file.addAction(t("&Back up now"), self.backup_now),
+            file.addAction(t("&Close project"), QKeySequence("Ctrl+W"), self.close_project),
         ]
         file.addSeparator()
-        file.addAction("&Quit", QKeySequence.StandardKey.Quit, self.close)
+        file.addAction(t("&Quit"), QKeySequence.StandardKey.Quit, self.close)
 
-        view = bar.addMenu("&View")
-        self.full_view_action = view.addAction("F&ull view", QKeySequence("Ctrl+Shift+F"), self.toggle_full_view)
+        view = bar.addMenu(t("&View"))
+        self.full_view_action = view.addAction(t("F&ull view"), QKeySequence("Ctrl+Shift+F"), self.toggle_full_view)
         self.full_view_action.setCheckable(True)
-        self.focus_action = view.addAction("&Focus mode", QKeySequence("F11"), self.toggle_focus)
+        self.focus_action = view.addAction(t("&Focus mode"), QKeySequence("F11"), self.toggle_focus)
         # Also attach to the window, so the shortcuts keep working while the menu bar is hidden.
         self.addActions([self.full_view_action, self.focus_action, self.save_action])
         self.project_actions += [self.full_view_action, self.focus_action, self.save_action]
@@ -280,25 +280,41 @@ class MainWindow(QMainWindow):
             act = view.addAction(name, QKeySequence(f"Ctrl+{i + 1}"), lambda i=i: self.nav.setCurrentRow(i))
             self.project_actions.append(act)
         view.addSeparator()
-        theme_menu = view.addMenu("&Theme")
+        theme_menu = view.addMenu(t("&Theme"))
         group = QActionGroup(self)
         current = self.settings.value("theme", "system")
-        for key, label in (("system", "Follow system"), ("light", "Light"), ("dark", "Dark")):
+        for key, label in (("system", t("Follow system")), ("light", t("Light")), ("dark", t("Dark"))):
             act = QAction(label, self, checkable=True)
             act.setChecked(key == current)
             act.triggered.connect(lambda _=False, k=key: self.set_theme(k))
             group.addAction(act)
             theme_menu.addAction(act)
+        # Languages are written in their own language, so anyone can find theirs.
+        language_menu = view.addMenu(t("&Language"))
+        languages = QActionGroup(self)
+        chosen = self.settings.value("language", "")
+        for code, name in [("", t("Follow system"))] + i18n.LANGUAGES:
+            act = QAction(name, self, checkable=True)
+            act.setChecked(code == chosen)
+            act.triggered.connect(lambda _=False, c=code: self.set_language(c))
+            languages.addAction(act)
+            language_menu.addAction(act)
 
         if cloud.configured():
-            self.account_menu = bar.addMenu("&Account")
+            self.account_menu = bar.addMenu(t("&Account"))
             self.account_menu.aboutToShow.connect(self._fill_account_menu)
             self._fill_account_menu()
 
-        help_ = bar.addMenu("&Help")
-        help_.addAction("&Keyboard shortcuts", self._shortcuts)
-        help_.addAction("&Support Candle ♥", self.show_about)
-        help_.addAction(f"&About {APP_NAME}", self.show_about)
+        help_ = bar.addMenu(t("&Help"))
+        help_.addAction(t("&Keyboard shortcuts"), self._shortcuts)
+        help_.addAction(t("&Support Candle ♥"), self.show_about)
+        help_.addAction(t("&About Candle"), self.show_about)
+
+    def set_language(self, code):
+        """Takes effect when Candle next starts: every window is built in the language chosen then."""
+        self.settings.setValue("language", code)
+        QMessageBox.information(self, t("Language"),
+                                t("Restart Candle to see it in the language you chose."))
 
     def set_theme(self, key):
         self.settings.setValue("theme", key)
@@ -325,30 +341,30 @@ class MainWindow(QMainWindow):
 
     # -- project lifecycle ------------------------------------------------
     def new_project(self):
-        title, ok = QInputDialog.getText(self, "New project", "Title of your novel:")
+        title, ok = QInputDialog.getText(self, t("New project"), t("Title of your novel:"))
         if not ok or not title.strip():
             return
         folder = self.settings.value("last_dir", str(Path.home() / "Documents"))
         safe = "".join(c for c in title.strip() if c not in '/\\:*?"<>|')
-        path, _ = QFileDialog.getSaveFileName(self, "Save project as", str(Path(folder) / (safe + EXTENSION)), FILE_FILTER)
+        path, _ = QFileDialog.getSaveFileName(self, t("Save project as"), str(Path(folder) / (safe + EXTENSION)), FILE_FILTER)
         if not path:
             return
         if not path.endswith(EXTENSION):
             path += EXTENSION
         if Path(path).exists():
-            QMessageBox.warning(self, "File exists", "A file with that name already exists. Choose another name.")
+            QMessageBox.warning(self, t("File exists"), t("A file with that name already exists. Choose another name."))
             return
         try:
             Project.create(path, title.strip()).close()
         except Exception as exc:
-            QMessageBox.critical(self, "Could not create project", str(exc))
+            QMessageBox.critical(self, t("Could not create project"), str(exc))
             return
         self.open_project(path)
         self.nav.setCurrentRow(1)
 
     def open_dialog(self):
         folder = self.settings.value("last_dir", str(Path.home() / "Documents"))
-        path, _ = QFileDialog.getOpenFileName(self, "Open project", folder, FILE_FILTER)
+        path, _ = QFileDialog.getOpenFileName(self, t("Open project"), folder, FILE_FILTER)
         if path:
             self.open_project(path)
 
@@ -359,7 +375,7 @@ class MainWindow(QMainWindow):
             project.backup(self.backup_dir())
             project.start_day()
         except Exception as exc:
-            QMessageBox.critical(self, "Could not open project", f"{path}\n\n{exc}")
+            QMessageBox.critical(self, t("Could not open project"), f"{path}\n\n{exc}")
             return
         self.project = project
         self._saved_at = None
@@ -413,11 +429,11 @@ class MainWindow(QMainWindow):
         if not has_project:
             return
         if Debouncer.any_pending():
-            self.save_label.setText("Saving…")
+            self.save_label.setText(t("Saving…"))
         elif self._saved_at:
-            self.save_label.setText(f"Saved ✓ {self._saved_at:%H:%M}")
+            self.save_label.setText(t("Saved ✓ {time}", time=f"{self._saved_at:%H:%M}"))
         else:
-            self.save_label.setText("All changes saved ✓")
+            self.save_label.setText(t("All changes saved ✓"))
 
     def flush(self):
         if self.project is None:
@@ -439,7 +455,7 @@ class MainWindow(QMainWindow):
         if self.project:
             self.flush()
             target = self.project.backup(self.backup_dir())
-            self.statusBar().showMessage(f"Backup saved to {target}", 6000)
+            self.statusBar().showMessage(t("Backup saved to {path}", path=target), 6000)
 
     def export(self):
         if self.project is None:
@@ -447,7 +463,7 @@ class MainWindow(QMainWindow):
         self.flush()
         dialog = ExportDialog(self.project, self, self.session)
         if dialog.exec():
-            self.statusBar().showMessage(f"Exported to {dialog.exported_path}", 8000)
+            self.statusBar().showMessage(t("Exported to {path}", path=dialog.exported_path), 8000)
 
     # -- Candle Premium ---------------------------------------------------
     def _load_session(self):
@@ -460,20 +476,20 @@ class MainWindow(QMainWindow):
         menu = self.account_menu
         menu.clear()
         if self.session is None:
-            menu.addAction("&Sign in or create account…", self.sign_in)
-            menu.addAction("Candle &Premium…", self.show_premium)
-            menu.addAction("Open web &dashboard", self.open_dashboard)
-            menu.addAction("&Write on the web", self.open_web_writer)
+            menu.addAction(t("&Sign in or create account…"), self.sign_in)
+            menu.addAction(t("Candle &Premium…"), self.show_premium)
+            menu.addAction(t("Open web &dashboard"), self.open_dashboard)
+            menu.addAction(t("&Write on the web"), self.open_web_writer)
             return
-        menu.addAction(f"Signed in as {self.session.email}").setEnabled(False)
-        menu.addAction("&Back up to cloud now", self.cloud_backup).setEnabled(self.project is not None)
-        menu.addAction("&Restore from cloud…", self.restore_from_cloud)
+        menu.addAction(t("Signed in as {email}", email=self.session.email)).setEnabled(False)
+        menu.addAction(t("&Back up to cloud now"), self.cloud_backup).setEnabled(self.project is not None)
+        menu.addAction(t("&Restore from cloud…"), self.restore_from_cloud)
         menu.addSeparator()
-        menu.addAction("Candle &Premium…", self.show_premium)
-        menu.addAction("Open web &dashboard", self.open_dashboard)
-        menu.addAction("&Write on the web", self.open_web_writer)
-        menu.addAction("&Account…", self.show_account)
-        menu.addAction("Sign &out", self.sign_out)
+        menu.addAction(t("Candle &Premium…"), self.show_premium)
+        menu.addAction(t("Open web &dashboard"), self.open_dashboard)
+        menu.addAction(t("&Write on the web"), self.open_web_writer)
+        menu.addAction(t("&Account…"), self.show_account)
+        menu.addAction(t("Sign &out"), self.sign_out)
 
     def sign_in(self):
         dialog = SignInDialog(self)
@@ -482,7 +498,7 @@ class MainWindow(QMainWindow):
         self.session = dialog.session
         self.settings.setValue("cloud/email", self.session.email)
         self.settings.setValue("cloud/refresh_token", self.session.refresh_token)
-        self.statusBar().showMessage(f"Signed in as {self.session.email}", 6000)
+        self.statusBar().showMessage(t("Signed in as {email}", email=self.session.email), 6000)
         self.cloud_backup(quiet=True)
         self.check_premium()
 
@@ -576,24 +592,23 @@ class MainWindow(QMainWindow):
     def _offer_web_version(self, project, latest):
         """Ask about a newer version written on the web; True if it's being loaded."""
         when = datetime.datetime.fromisoformat(latest["created"]).astimezone().strftime("%Y-%m-%d %H:%M")
-        where = "by Lighter, from your answers," if latest.get("source") == "lighter" else "in Candle on the web"
+        by_lighter = latest.get("source") == "lighter"
+        edited = (t("This book was edited by Lighter, from your answers, ({when}).", when=when) if by_lighter
+                  else t("This book was edited in Candle on the web ({when}).", when=when))
         if sync.unchanged_since_sync(project):
             answer = QMessageBox.question(
-                self, "Changes made on the web",
-                f"This book was edited {where} ({when}).<br><br>Bring those changes in? "
-                "This file hasn't changed since its last cloud backup, so nothing here is lost; a copy "
-                "of it is kept in Candle's backups first.",
+                self, t("Changes made on the web"),
+                edited + "<br><br>" + t("Bring those changes in? This file hasn't changed since its last cloud backup, so nothing here is lost; a copy of it is kept in Candle's backups first."),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes)
             if answer == QMessageBox.StandardButton.Yes:
                 self._load_web_version(project, latest)
                 return True
             return False
-        box = QMessageBox(QMessageBox.Icon.Warning, "Edited in two places",
-                          f"This book was edited {where} ({when}), and it also changed here "
-                          "since then. Nothing is merged automatically.<br><br>"
-                          "You can save the web version as a separate file to compare the two.", parent=self)
-        save_copy = box.addButton("Save the web version as a file…", QMessageBox.ButtonRole.AcceptRole)
-        box.addButton("Keep this file", QMessageBox.ButtonRole.RejectRole)
+        box = QMessageBox(QMessageBox.Icon.Warning, t("Edited in two places"),
+                          edited + " " + t("It also changed here since then. Nothing is merged automatically.") + "<br><br>" +
+                          t("You can save the web version as a separate file to compare the two."), parent=self)
+        save_copy = box.addButton(t("Save the web version as a file…"), QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(t("Keep this file"), QMessageBox.ButtonRole.RejectRole)
         box.exec()
         if box.clickedButton() is save_copy:
             self._save_web_copy(project, latest, when)
@@ -603,7 +618,7 @@ class MainWindow(QMainWindow):
         folder = Path(tempfile.mkdtemp(prefix="candle-web-"))
         target = folder / "web.candle"
         project_id, path = project.cloud_id(), project.path
-        self.statusBar().showMessage("Loading the changes made on the web…")
+        self.statusBar().showMessage(t("Loading the changes made on the web…"))
 
         def done(_):
             try:
@@ -613,35 +628,34 @@ class MainWindow(QMainWindow):
                     sync.adopt_version(project, target)
                     sync.remember(project, latest["backup_id"], sync.fingerprint(project))
                     self.open_project(str(path))         # reload every view; backs up again
-                    self.statusBar().showMessage("Loaded the changes made on the web ✓", 8000)
+                    self.statusBar().showMessage(t("Loaded the changes made on the web ✓"), 8000)
             finally:
                 shutil.rmtree(folder, ignore_errors=True)
 
         def failed(exc):
             shutil.rmtree(folder, ignore_errors=True)
-            QMessageBox.warning(self, "Changes made on the web", f"Couldn't load them.\n\n{exc}")
+            QMessageBox.warning(self, t("Changes made on the web"), t("Couldn't load them.") + f"\n\n{exc}")
             self.cloud_backup(quiet=True)
 
         run_async(lambda: self.session.download(project_id, latest["backup_id"], target), done, failed)
 
     def _save_web_copy(self, project, latest, when):
         default = project.path.with_name(f"{project.path.stem} (web {when[:10]}).candle")
-        path, _ = QFileDialog.getSaveFileName(self, "Save the web version", str(default), "Candle project (*.candle)")
+        path, _ = QFileDialog.getSaveFileName(self, t("Save the web version"), str(default), FILE_FILTER)
         if not path:
             return
         target = Path(path if path.endswith(".candle") else path + ".candle")
         if target.exists():
-            QMessageBox.warning(self, "File exists", "A file with that name already exists. Choose another name.")
+            QMessageBox.warning(self, t("File exists"), t("A file with that name already exists. Choose another name."))
             return
 
         def done(_):
             sync.detach(target)   # its own project from now on, with its own backups
-            QMessageBox.information(self, "Web version saved",
-                                    f"Saved as {target.name}. Open it with File → Open to compare; "
-                                    "it's a separate project now.")
+            QMessageBox.information(self, t("Web version saved"),
+                                    t("Saved as {name}. Open it with File → Open to compare; it's a separate project now.", name=target.name))
 
         run_async(lambda: self.session.download(project.cloud_id(), latest["backup_id"], target), done,
-                  lambda exc: QMessageBox.warning(self, "Web version", f"Couldn't save it.\n\n{exc}"))
+                  lambda exc: QMessageBox.warning(self, t("Web version"), t("Couldn't save it.") + f"\n\n{exc}"))
 
     def cloud_backup(self, quiet=False):
         if self.project is None or self.session is None or self._cloud_busy:
@@ -654,7 +668,7 @@ class MainWindow(QMainWindow):
         title, session = self.project.title, self.session
         self._cloud_busy = True
         if not quiet:
-            self.statusBar().showMessage("Backing up to the cloud…")
+            self.statusBar().showMessage(t("Backing up to the cloud…"))
 
         def upload():
             try:
@@ -666,7 +680,7 @@ class MainWindow(QMainWindow):
             self._cloud_busy = False
             if project is self.project and result:
                 sync.remember(project, result["backup_id"], print_)   # what this file now matches
-            self.statusBar().showMessage("Backed up to the cloud ✓", 6000)
+            self.statusBar().showMessage(t("Backed up to the cloud ✓"), 6000)
 
         def failed(exc):
             self._cloud_busy = False
@@ -677,14 +691,14 @@ class MainWindow(QMainWindow):
     def _cloud_failed(self, exc, quiet):
         if getattr(exc, "session_ended", False):
             self.sign_out()
-            QMessageBox.information(self, "Signed out", f"{exc}\n\nUse Account → Sign in to continue.")
+            QMessageBox.information(self, t("Signed out"), f"{exc}\n\n" + t("Use Account → Sign in to continue."))
         elif quiet and getattr(exc, "status", 0) in (402, 403):
             pass   # not Premium, or email not confirmed yet: Account… explains
         elif quiet:
-            self.statusBar().showMessage(f"Cloud backup failed: {str(exc).splitlines()[0]}", 8000)
+            self.statusBar().showMessage(t("Cloud backup failed: {reason}", reason=str(exc).splitlines()[0]), 8000)
         else:
             self.statusBar().clearMessage()
-            QMessageBox.warning(self, "Cloud backup", str(exc))
+            QMessageBox.warning(self, t("Cloud backup"), str(exc))
 
     def restore_from_cloud(self):
         folder = self.settings.value("last_dir", str(Path.home() / "Documents"))
@@ -713,23 +727,23 @@ class MainWindow(QMainWindow):
         p = self.project
         today = p.words_today()
         goal = int(p.get_meta("daily_goal", 0) or 0)
-        today_text = f"today {today:+,}" + (f" / {goal:,}" if goal else "")
+        today_text = t("today {words}", words=("+" if today > 0 else "") + number(today)) + (f" / {number(goal)}" if goal else "")
         streak = ""
         if self.premium:
             s = coach.for_project(p)
             streak = f"  ·  🔥 {s.streak_text}" if s.streak else ""
             if self.pages.currentWidget() is self.goals_view:
                 self.goals_view.refresh()
-        self.words_label.setText(f"{p.total_words():,} words  ·  {today_text}{streak}  ")
+        self.words_label.setText(f"{tn(p.total_words(), '{n} word', '{n} words')}  ·  {today_text}{streak}  ")
         self.setWindowTitle(f"{p.title} — {APP_NAME}")
 
     # -- full view and focus mode -----------------------------------------
     # Full view: the scene editor fills the window (side panels hidden).
     # Focus mode: full screen, with only the text visible.
-    def _can_expand(self, mode_name):
+    def _can_expand(self, why):
         if self.pages.currentWidget() is self.chapters_view and self.chapters_view.has_open_scene():
             return True
-        self.statusBar().showMessage(f"Open a scene in Chapters to use {mode_name}.", 4000)
+        self.statusBar().showMessage(why, 4000)
         return False
 
     def _apply_view(self):
@@ -744,7 +758,7 @@ class MainWindow(QMainWindow):
     def toggle_full_view(self):
         if self.project is None or self.focus_mode:
             return
-        if not self.full_view and not self._can_expand("full view"):
+        if not self.full_view and not self._can_expand(t("Open a scene in Chapters to use full view.")):
             self._apply_view()   # undo the button's own check state
             return
         self.full_view = not self.full_view
@@ -754,7 +768,7 @@ class MainWindow(QMainWindow):
         if self.project is None:
             return
         if not self.focus_mode:
-            if not self._can_expand("focus mode"):
+            if not self._can_expand(t("Open a scene in Chapters to use focus mode.")):
                 return
             self._was_maximized = self.isMaximized()
         self.focus_mode = not self.focus_mode
@@ -781,19 +795,20 @@ class MainWindow(QMainWindow):
     # -- help -------------------------------------------------------------
     def _shortcuts(self):
         mod = "Cmd" if sys.platform == "darwin" else "Ctrl"
-        QMessageBox.information(self, "Keyboard shortcuts", """
-<table cellpadding=3>
-<tr><td><b>Ctrl+Shift+F</b></td><td>Full view: the text fills the window (Esc to leave)</td></tr>
-<tr><td><b>F11</b></td><td>Focus mode: full screen, text only (Esc to leave)</td></tr>
-<tr><td><b>Ctrl+1 … Ctrl+8</b></td><td>Switch section</td></tr>
-<tr><td><b>Ctrl+B / I / U</b></td><td>Bold / italic / underline</td></tr>
-<tr><td><b>Ctrl+Shift+X</b></td><td>Strikethrough</td></tr>
-<tr><td><b>Ctrl+Shift+8 / 7</b></td><td>Bulleted / numbered list</td></tr>
-<tr><td><b>Ctrl+L / E / R / J</b></td><td>Align left / center / right / justify</td></tr>
-<tr><td><b>Ctrl+F</b></td><td>Find in the current text</td></tr>
-<tr><td><b>Ctrl+S</b></td><td>Save now (Candle also saves automatically)</td></tr>
-<tr><td><b>Ctrl+Shift+E</b></td><td>Export manuscript</td></tr>
-</table>""".replace("Ctrl", mod))
+        rows = [
+            ("Ctrl+Shift+F", t("Full view: the text fills the window (Esc to leave)")),
+            ("F11", t("Focus mode: full screen, text only (Esc to leave)")),
+            ("Ctrl+1 … Ctrl+8", t("Switch section")),
+            ("Ctrl+B / I / U", t("Bold / italic / underline")),
+            ("Ctrl+Shift+X", t("Strikethrough")),
+            ("Ctrl+Shift+8 / 7", t("Bulleted / numbered list")),
+            ("Ctrl+L / E / R / J", t("Align left / center / right / justify")),
+            ("Ctrl+F", t("Find in the current text")),
+            ("Ctrl+S", t("Save now (Candle also saves automatically)")),
+            ("Ctrl+Shift+E", t("Export manuscript")),
+        ]
+        table = "".join(f"<tr><td><b>{keys.replace('Ctrl', mod)}</b></td><td>{what}</td></tr>" for keys, what in rows)
+        QMessageBox.information(self, t("Keyboard shortcuts"), f"<table cellpadding=3>{table}</table>")
 
     def show_about(self):
         AboutDialog(ICON, self.backup_dir(), self).exec()
@@ -813,6 +828,7 @@ def main(argv=None):
     app.setApplicationVersion(__version__)
     app.setDesktopFileName("candle")
     app.setWindowIcon(QIcon(str(ICON)))
+    i18n.install_qt_translations(app)
     settings = QSettings(APP_NAME, APP_NAME)
     apply_theme(app, resolve_theme(app, settings.value("theme", "system")))
 

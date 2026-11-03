@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import export
+from .i18n import t
 
 TEMPLATE = Path(__file__).parent / "resources" / "kdp.typ"
 MIN_PAGES = 24
@@ -108,7 +109,7 @@ def _compile(data):
         return typst.compile(TEMPLATE.read_bytes(), root=str(TEMPLATE.parent),
                              sys_inputs={"book": json.dumps(data)})
     except typst.TypstError as exc:
-        raise PrintError(f"Typesetting failed: {exc}")
+        raise PrintError(t("Typesetting failed: {reason}", reason=exc))
 
 
 def write_kdp_pdf(project, path, options=None, layout=None):
@@ -122,7 +123,7 @@ def write_kdp_pdf(project, path, options=None, layout=None):
         "language": project.get_meta("language", "") or "en",
     }
     if not any(ch.scenes for ch in chapters):
-        raise PrintError("There's no text to print yet.")
+        raise PrintError(t("There's no text to print yet."))
 
     # The gutter depends on the page count, which depends on the gutter:
     # lay the book out again until they agree (once or twice in practice).
@@ -137,12 +138,11 @@ def write_kdp_pdf(project, path, options=None, layout=None):
 
     max_pages = TRIM_SIZES[layout.trim][PAPERS[layout.paper]]
     if pages > max_pages:
-        raise PrintError(
-            f"This book comes to {pages} pages, but KDP prints at most {max_pages} at "
-            f"{layout.trim.split(' (')[0]} on {layout.paper.lower()}. Choose a larger trim size "
-            "or a smaller font.")
+        raise PrintError(t(
+            "This book comes to {pages} pages, but KDP prints at most {max_pages} at {trim} on {paper}. Choose a larger trim size or a smaller font.",
+            pages=pages, max_pages=max_pages, trim=layout.trim.split(" (")[0], paper=t(layout.paper)))
     warnings = []
     if pages < MIN_PAGES:
-        warnings.append(f"KDP prints paperbacks of at least {MIN_PAGES} pages; this one has {pages}.")
+        warnings.append(t("KDP prints paperbacks of at least {min} pages; this one has {pages}.", min=MIN_PAGES, pages=pages))
     Path(path).write_bytes(pdf)
     return Result(pages, inside, warnings)

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import coach
+from ..i18n import locale, t
 from ..widgets import Debouncer, heading, hbox
 from .base import View
 
@@ -148,24 +149,23 @@ class GoalsView(View):
 
         # The goals.
         self.unit = QComboBox()
-        self.unit.addItem("Words", "words")
-        self.unit.addItem(f"Pages ({coach.WORDS_PER_PAGE} words each)", "pages")
+        self.unit.addItem(t("Words"), "words")
+        self.unit.addItem(t("Pages ({n} words each)", n=coach.WORDS_PER_PAGE), "pages")
         self.daily = QSpinBox()
         self.daily.setRange(0, 100_000)
         self.week_days = QSpinBox()
         self.week_days.setRange(1, 7)
-        self.week_days.setSuffix(" days a week")
+        self.week_days.setSuffix(" " + t("days a week"))
         self.target = QSpinBox()
         self.target.setRange(0, 10_000_000)
-        self.use_deadline = QCheckBox("Finish by")
+        self.use_deadline = QCheckBox(t("Finish by"))
         self.deadline = QDateEdit()
         self.deadline.setCalendarPopup(True)
         self.deadline.setDisplayFormat("d MMMM yyyy")
-        self.remind = QCheckBox("Remind me at")
+        self.remind = QCheckBox(t("Remind me at"))
         self.remind_at = QTimeEdit()
         self.remind_at.setDisplayFormat("HH:mm")
-        remind_hint = QLabel("While Candle is open, if you haven't met the day's goal yet. "
-                             "Candle on the web can remind you too.")
+        remind_hint = QLabel(t("While Candle is open, if you haven't met the day's goal yet. Candle on the web can remind you too."))
         remind_hint.setObjectName("hint")
         remind_hint.setWordWrap(True)
         self.unit.currentIndexChanged.connect(self._unit_changed)
@@ -177,10 +177,10 @@ class GoalsView(View):
         for box in (self.use_deadline, self.remind):
             box.toggled.connect(self._toggled)
         form = QFormLayout()
-        form.addRow("Count in", self.unit)
-        form.addRow("Daily goal", self.daily)
-        form.addRow("Write on", self.week_days)
-        form.addRow("Target length", self.target)
+        form.addRow(t("Count in"), self.unit)
+        form.addRow(t("Daily goal"), self.daily)
+        form.addRow(t("Write on"), self.week_days)
+        form.addRow(t("Target length"), self.target)
         form.addRow(self.use_deadline, self.deadline)
         form.addRow(self.remind, self.remind_at)
         form.addRow("", remind_hint)
@@ -190,23 +190,21 @@ class GoalsView(View):
         g.setContentsMargins(0, 0, 0, 0)
         g.addWidget(card)
         g.addSpacing(10)
-        g.addWidget(hbox(QLabel("<b>This week</b>"), None, self.streak))
+        g.addWidget(hbox(QLabel(f"<b>{t('This week')}</b>"), None, self.streak))
         g.addLayout(week)
         g.addWidget(self.week_note)
         g.addSpacing(14)
-        g.addWidget(QLabel("<b>Your goals for this project</b>"))
+        g.addWidget(QLabel(f"<b>{t('Your goals for this project')}</b>"))
         g.addLayout(form)
 
         # Without Premium: what Goals are, and where to get them.
         self.locked = QFrame()
         self.locked.setObjectName("card")
-        about = QLabel("<b>Meet Lighter, your writing companion.</b><br><br>"
-                       "Set a daily goal in words or pages, how many days a week you write, and a deadline. "
-                       "Lighter keeps your streak, works out the pace you need, cheers when you get there and "
-                       "reminds you when you haven't — here and in Candle on the web.<br><br>"
-                       "Goals are part of <b>Candle Premium</b>.")
+        about = QLabel(f"<b>{t('Meet Lighter, your writing companion.')}</b><br><br>" +
+                       t("Set a daily goal in words or pages, how many days a week you write, and a deadline. Lighter keeps your streak, works out the pace you need, cheers when you get there and reminds you when you haven't — here and in Candle on the web.") +
+                       "<br><br>" + t("Goals are part of <b>Candle Premium</b>."))
         about.setWordWrap(True)
-        get = QPushButton("Candle Premium…")
+        get = QPushButton(t("Candle Premium…"))
         get.setObjectName("primary")
         get.clicked.connect(self.premium_requested)
         lv = QVBoxLayout(self.locked)
@@ -216,7 +214,7 @@ class GoalsView(View):
         inner = QWidget()
         inner.setMaximumWidth(720)
         v = QVBoxLayout(inner)
-        v.addWidget(heading("Goals"))
+        v.addWidget(heading(t("Goals")))
         v.addWidget(self.goals)
         v.addWidget(self.locked)
         v.addStretch(1)
@@ -245,12 +243,12 @@ class GoalsView(View):
 
     def _set_suffixes(self):
         pages = self._pages()
-        self.daily.setSuffix(" pages / day" if pages else " words / day")
+        self.daily.setSuffix(" " + (t("pages / day") if pages else t("words / day")))
         self.daily.setSingleStep(1 if pages else 100)
-        self.daily.setSpecialValueText("no daily goal")
-        self.target.setSuffix(" pages" if pages else " words")
+        self.daily.setSpecialValueText(t("no daily goal"))
+        self.target.setSuffix(" " + (t("pages") if pages else t("words")))
         self.target.setSingleStep(10 if pages else 1000)
-        self.target.setSpecialValueText("no target")
+        self.target.setSpecialValueText(t("no target"))
 
     def _widgets(self):
         return (self.unit, self.daily, self.week_days, self.target, self.use_deadline, self.deadline,
@@ -326,19 +324,19 @@ class GoalsView(View):
         bar, goal, done = self.today_bar, s.today_goal, max(s.today_words, 0)
         bar.setRange(0, goal or 1)
         bar.setValue(min(done, goal) if goal else 0)
-        bar.setFormat(f"Today: {coach.amount(done, s.unit)}" + (f" of {coach.amount(goal, s.unit)}" if goal else ""))
+        bar.setFormat(t("Today: {done} of {goal}", done=coach.amount(done, s.unit), goal=coach.amount(goal, s.unit)) if goal
+                      else t("Today: {done}", done=coach.amount(done, s.unit)))
         self.streak.setText(f"🔥 {s.streak_text}" if s.streak else "")
         today = datetime.date.today()
         for (name, mark), (day, words, met) in zip(self.days, s.week):
-            name.setText(f"{day:%a}")
-            name.setToolTip(f"{day:%A %d %B}: {coach.amount(max(words, 0), s.unit)}")
+            name.setText(locale.toString(day, "ddd"))
+            name.setToolTip(f"{locale.toString(day, 'dddd d MMMM')}: {coach.amount(max(words, 0), s.unit)}")
             mark.setToolTip(name.toolTip())
             mark.setText("🔥" if met else ("·" if day > today else "○"))
         if s.week_days < 7:
-            self.week_note.setText(f"{s.week_met} of {s.week_days} writing days this week.")
+            self.week_note.setText(t("{met} of {days} writing days this week.", met=s.week_met, days=s.week_days))
         else:
-            self.week_note.setText("Every day counts toward your streak. Rather rest some days? "
-                                   "Set how many days a week you write.")
+            self.week_note.setText(t("Every day counts toward your streak. Rather rest some days? Set how many days a week you write."))
 
     def shown(self):
         self.reload()

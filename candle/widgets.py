@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from . import richtext
 from .db import count_words
+from .i18n import t, tn
 
 LINE_HEIGHT = 150      # percent
 TEXT_COLUMN = 760      # max width of the text column, in pixels
@@ -87,7 +88,7 @@ class RichEditor(QWidget):
 
     changed = Signal()
 
-    STYLES = ("Body text", "Heading 1", "Heading 2", "Heading 3")
+    STYLES = (t("Body text"), t("Heading 1"), t("Heading 2"), t("Heading 3"))
 
     def __init__(self, placeholder="", toolbar=True, parent=None):
         super().__init__(parent)
@@ -149,7 +150,7 @@ class RichEditor(QWidget):
 
     def _update_count(self):
         text = self.plain()
-        self.count.setText(f"{count_words(text):,} words · {len(text):,} characters  ")
+        self.count.setText(f"{tn(count_words(text), '{n} word', '{n} words')} · {tn(len(text), '{n} character', '{n} characters')}  ")
 
     def _action(self, icon, fallback, tip, slot, shortcut=None, checkable=False):
         act = QAction(QIcon.fromTheme(icon), fallback, self)
@@ -165,8 +166,8 @@ class RichEditor(QWidget):
 
     def _build_toolbar(self):
         e = self.edit
-        self._action("edit-undo", "↶", "Undo", e.undo, QKeySequence.StandardKey.Undo)
-        self._action("edit-redo", "↷", "Redo", e.redo, QKeySequence.StandardKey.Redo)
+        self._action("edit-undo", "↶", t("Undo"), e.undo, QKeySequence.StandardKey.Undo)
+        self._action("edit-redo", "↷", t("Redo"), e.redo, QKeySequence.StandardKey.Redo)
         self.toolbar.addSeparator()
 
         self.style_box = QComboBox()
@@ -176,27 +177,27 @@ class RichEditor(QWidget):
         self.toolbar.addWidget(self.style_box)
         self.toolbar.addSeparator()
 
-        self.act_bold = self._action("format-text-bold", "B", "Bold", self._bold, QKeySequence.StandardKey.Bold, True)
-        self.act_italic = self._action("format-text-italic", "I", "Italic",
+        self.act_bold = self._action("format-text-bold", "B", t("Bold"), self._bold, QKeySequence.StandardKey.Bold, True)
+        self.act_italic = self._action("format-text-italic", "I", t("Italic"),
                                        lambda on: e.setFontItalic(on), QKeySequence.StandardKey.Italic, True)
-        self.act_underline = self._action("format-text-underline", "U", "Underline",
+        self.act_underline = self._action("format-text-underline", "U", t("Underline"),
                                           lambda on: e.setFontUnderline(on), QKeySequence.StandardKey.Underline, True)
-        self.act_strike = self._action("format-text-strikethrough", "S", "Strikethrough", self._strike, "Ctrl+Shift+X", True)
+        self.act_strike = self._action("format-text-strikethrough", "S", t("Strikethrough"), self._strike, "Ctrl+Shift+X", True)
         self.toolbar.addSeparator()
 
-        self._action("format-list-unordered", "•", "Bulleted list",
+        self._action("format-list-unordered", "•", t("Bulleted list"),
                      lambda: self._list(QTextListFormat.Style.ListDisc), "Ctrl+Shift+8")
-        self._action("format-list-ordered", "1.", "Numbered list",
+        self._action("format-list-ordered", "1.", t("Numbered list"),
                      lambda: self._list(QTextListFormat.Style.ListDecimal), "Ctrl+Shift+7")
         self.toolbar.addSeparator()
 
         group = QActionGroup(self)
         self.align_actions = {}
         for flag, icon, text, tip, key in (
-            (Qt.AlignmentFlag.AlignLeft, "format-justify-left", "⇤", "Align left", "Ctrl+L"),
-            (Qt.AlignmentFlag.AlignHCenter, "format-justify-center", "↔", "Center", "Ctrl+E"),
-            (Qt.AlignmentFlag.AlignRight, "format-justify-right", "⇥", "Align right", "Ctrl+R"),
-            (Qt.AlignmentFlag.AlignJustify, "format-justify-fill", "☰", "Justify", "Ctrl+J"),
+            (Qt.AlignmentFlag.AlignLeft, "format-justify-left", "⇤", t("Align left"), "Ctrl+L"),
+            (Qt.AlignmentFlag.AlignHCenter, "format-justify-center", "↔", t("Center"), "Ctrl+E"),
+            (Qt.AlignmentFlag.AlignRight, "format-justify-right", "⇥", t("Align right"), "Ctrl+R"),
+            (Qt.AlignmentFlag.AlignJustify, "format-justify-fill", "☰", t("Justify"), "Ctrl+J"),
         ):
             act = self._action(icon, text, tip, lambda _=False, f=flag: e.setAlignment(f), key, True)
             group.addAction(act)
@@ -204,7 +205,7 @@ class RichEditor(QWidget):
         self.toolbar.addSeparator()
 
         self.find_box = QLineEdit()
-        self.find_box.setPlaceholderText("Find…")
+        self.find_box.setPlaceholderText(t("Find…"))
         self.find_box.setClearButtonEnabled(True)
         self.find_box.setMaximumWidth(180)
         self.find_box.returnPressed.connect(self._find_next)
@@ -298,7 +299,7 @@ class CheckList(QListWidget):
         self._loading = True
         self.clear()
         for item_id, label in items:
-            item = QListWidgetItem(label or "(untitled)")
+            item = QListWidgetItem(label or t("(unnamed)"))
             item.setData(Qt.ItemDataRole.UserRole, item_id)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Checked if item_id in checked_ids else Qt.CheckState.Unchecked)

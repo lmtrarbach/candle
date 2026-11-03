@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Candle in ten languages.** English, French, Spanish, Portuguese (Brazil),
+  German, Italian, Dutch, Hindi, Simplified Chinese and Japanese (horizontal
+  writing only). Candle follows your computer's language; **View → Language**
+  changes it.
+- **Word counts in Chinese and Japanese.** Written without spaces, each
+  character now counts as a word, as in word processors, so goals and streaks
+  work.
+
 ## 0.3.1 — 2026-10-31
 
 - **macOS is back.** Each release includes a `.dmg` for Apple Silicon Macs
