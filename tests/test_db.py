@@ -101,3 +101,10 @@ def test_backup_keeps_latest(tmp_path, project):
 def test_bad_identifier_rejected(project):
     with pytest.raises(ValueError):
         project.list("scenes; DROP TABLE scenes")
+
+
+def test_count_words_in_chinese_and_japanese():
+    """Written without spaces: each character counts, as word processors count them."""
+    assert count_words("吾輩は猫である。") == 7
+    assert count_words("我爱写小说。") == 5
+    assert count_words("第1章 Tokyo の夜") == 6   # 第 + 1 + 章 + Tokyo + の + 夜

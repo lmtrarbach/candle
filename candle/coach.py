@@ -21,6 +21,18 @@ import json
 import math
 import re
 
+try:   # LINES stay English: tests/test_i18n.py checks each is translated
+    from .i18n import long_date, t, tn
+except ImportError:   # Candle's server keeps a copy of this file and speaks English; the web translates
+    def t(key, **values):
+        return key.format(**values)
+
+    def tn(n, one, other, **values):
+        return (one if n == 1 else other).format(n=f"{n:,}", **values)
+
+    def long_date(day):
+        return f"{day:%d %B %Y}".lstrip("0")
+
 WORDS_PER_PAGE = 250   # a standard manuscript page
 DEFAULTS = {"unit": "words", "week_days": 7, "deadline": "", "remind_at": ""}
 TIME = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -133,9 +145,9 @@ def amount(words, unit):
     """Words in the writer's unit: "1,250 words", "5 pages"."""
     if unit == "pages":
         pages = words / WORDS_PER_PAGE
-        text = f"{pages:,.0f}" if pages >= 10 else f"{pages:.1f}".removesuffix(".0")
-        return f"{text} page" + ("" if text == "1" else "s")
-    return f"{words:,} word" + ("" if words == 1 else "s")
+        n = round(pages) if pages >= 10 else round(pages, 1)
+        return tn(int(n) if float(n).is_integer() else n, "{n} page", "{n} pages")
+    return tn(words, "{n} word", "{n} words")
 
 
 def written_by_day(daily, total, today):
@@ -172,7 +184,9 @@ class Status:
 
     @property
     def streak_text(self):
-        return f"{self.streak} {self.streak_unit}{'s' * (self.streak != 1)}"
+        if self.streak_unit == "week":
+            return tn(self.streak, "{n} week", "{n} weeks")
+        return tn(self.streak, "{n} day", "{n} days")
 
     @property
     def pace_text(self):
@@ -180,11 +194,11 @@ class Status:
             return ""
         if self.total >= self.target:
             return ""
-        when = f"{self.deadline:%d %B %Y}".lstrip("0")
+        when = long_date(self.deadline)
         if self.pace is None:
-            return f"Your deadline, {when}, has passed."
-        return (f"To reach {amount(self.target, self.unit)} by {when}: "
-                f"{amount(self.pace, self.unit)} a day ({self.days_left} day{'s' * (self.days_left != 1)} left).")
+            return t("Your deadline, {date}, has passed.", date=when)
+        return t("To reach {target} by {date}: {pace} a day ({left}).", target=amount(self.target, self.unit),
+                 date=when, pace=amount(self.pace, self.unit), left=tn(self.days_left, "{n} day left", "{n} days left"))
 
 
 def status(daily, total, today, daily_goal=0, target=0, goals=None, hour=12):
@@ -256,9 +270,9 @@ def _say(s, today):
     lines = LINES[s.kind]
     line = lines[(today.toordinal() + len(s.kind)) % len(lines)]
     goal = s.today_goal or (WORDS_PER_PAGE if s.unit == "pages" else 100)
-    return line.format(goal=amount(goal, s.unit), words=amount(max(s.today_words, 0), s.unit),
-                       left=amount(max(goal - s.today_words, 0), s.unit), streak=s.streak_text,
-                       pace=amount(s.pace or 0, s.unit))
+    return t(line, goal=amount(goal, s.unit), words=amount(max(s.today_words, 0), s.unit),
+             left=amount(max(goal - s.today_words, 0), s.unit), streak=s.streak_text,
+             pace=amount(s.pace or 0, s.unit))
 
 
 def for_project(project, today=None, hour=None):

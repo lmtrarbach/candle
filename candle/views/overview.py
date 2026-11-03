@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import cloud, export, kdp
+from ..i18n import number, t, tn
 from ..questions import ARCHITECTURE_SECTIONS
 from ..widgets import Debouncer, RichEditor, heading, hbox
 from .base import View
@@ -29,13 +30,13 @@ class ProjectView(View):
         self.target = QSpinBox()
         self.target.setRange(0, 10_000_000)
         self.target.setSingleStep(1000)
-        self.target.setSuffix(" words")
-        self.target.setSpecialValueText("no target")
+        self.target.setSuffix(" " + t("words"))
+        self.target.setSpecialValueText(t("no target"))
         self.daily = QSpinBox()
         self.daily.setRange(0, 100_000)
         self.daily.setSingleStep(100)
-        self.daily.setSuffix(" words / day")
-        self.daily.setSpecialValueText("no daily goal")
+        self.daily.setSuffix(" " + t("words / day"))
+        self.daily.setSpecialValueText(t("no daily goal"))
         for w in (self.title, self.author, self.language):
             w.textEdited.connect(self.saver.poke)
         for w in (self.target, self.daily):
@@ -47,24 +48,24 @@ class ProjectView(View):
         self.path.setObjectName("hint")
         self.path.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
-        export_btn = QPushButton("Export manuscript…")
+        export_btn = QPushButton(t("Export manuscript…"))
         export_btn.clicked.connect(self.export_requested)
-        backup_btn = QPushButton("Back up now")
+        backup_btn = QPushButton(t("Back up now"))
         backup_btn.clicked.connect(self.backup_requested)
 
         form = QFormLayout()
-        form.addRow("Title", self.title)
-        form.addRow("Author", self.author)
-        form.addRow("Language", self.language)
-        form.addRow("Target length", self.target)
-        form.addRow("Daily goal", self.daily)
-        form.addRow("Manuscript", self.total_bar)
-        form.addRow("Today", self.today_bar)
+        form.addRow(t("Title"), self.title)
+        form.addRow(t("Author"), self.author)
+        form.addRow(t("Language"), self.language)
+        form.addRow(t("Target length"), self.target)
+        form.addRow(t("Daily goal"), self.daily)
+        form.addRow(t("Manuscript"), self.total_bar)
+        form.addRow(t("Today"), self.today_bar)
 
         inner = QWidget()
         inner.setMaximumWidth(720)
         v = QVBoxLayout(inner)
-        v.addWidget(heading("Project"))
+        v.addWidget(heading(t("Project")))
         v.addLayout(form)
         v.addSpacing(12)
         v.addWidget(hbox(export_btn, backup_btn, None))
@@ -85,7 +86,7 @@ class ProjectView(View):
         self.daily.setValue(int(p.get_meta("daily_goal", 0) or 0))
         for w in (self.title, self.author, self.language, self.target, self.daily):
             w.blockSignals(False)
-        self.path.setText(f"Saved automatically to {p.path}")
+        self.path.setText(t("Saved automatically to {path}", path=p.path))
         self.update_progress()
 
     def update_progress(self):
@@ -114,11 +115,11 @@ def _progress(bar, value, goal):
     if goal:
         bar.setRange(0, goal)
         bar.setValue(min(value, goal))
-        bar.setFormat(f"{value:,} / {goal:,} words  (%p%)")
+        bar.setFormat(t("{value} / {goal} words", value=number(value), goal=number(goal)) + "  (%p%)")
     else:
         bar.setRange(0, 1)
         bar.setValue(0)
-        bar.setFormat(f"{value:,} words")
+        bar.setFormat(tn(value, "{n} word", "{n} words"))
 
 
 class ArchitectureView(View):
@@ -127,7 +128,8 @@ class ArchitectureView(View):
         self.saver = Debouncer(self.save)
         self.tabs = QTabWidget()
         self.editors = {}
-        for key, title, prompt in ARCHITECTURE_SECTIONS:
+        for key, title, prompt in ARCHITECTURE_SECTIONS:   # English in questions.py, shown translated
+            title, prompt = t(title), t(prompt)
             editor = RichEditor(prompt)
             editor.changed.connect(self.saver.poke)
             page = QWidget()
@@ -140,10 +142,10 @@ class ArchitectureView(View):
             self.tabs.addTab(page, title)
             self.editors[key] = editor
         self.strands = StrandsView()
-        self.tabs.addTab(self.strands, "Narrative strands")
+        self.tabs.addTab(self.strands, t("Narrative strands"))
 
         layout = QVBoxLayout(self)
-        layout.addWidget(heading("Architecture"))
+        layout.addWidget(heading(t("Architecture")))
         layout.addWidget(self.tabs, 1)
 
     def set_project(self, project):
@@ -176,7 +178,7 @@ def time_sort_key(text):
 class TimelineView(View):
     scene_requested = Signal(int)
 
-    COLUMNS = ("When", "#", "Chapter", "Scene", "Point of view", "Location", "Status")
+    COLUMNS = (t("When"), "#", t("Chapter"), t("Scene"), t("Point of view"), t("Location"), t("Status"))
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -192,18 +194,17 @@ class TimelineView(View):
         self.table.cellDoubleClicked.connect(self._open)
 
         self.order = QComboBox()
-        self.order.addItem("Story time (when it happens)", "time")
-        self.order.addItem("Reading order (how it is told)", "reading")
+        self.order.addItem(t("Story time (when it happens)"), "time")
+        self.order.addItem(t("Reading order (how it is told)"), "reading")
         self.order.activated.connect(self.reload)
 
-        hint = QLabel("Give each scene a time in its Details panel (YYYY-MM-DD HH:MM sorts best). "
-                      "Double-click a row to open the scene.")
+        hint = QLabel(t("Give each scene a time in its Details panel (YYYY-MM-DD HH:MM sorts best). Double-click a row to open the scene."))
         hint.setObjectName("hint")
         hint.setWordWrap(True)
         layout = QVBoxLayout(self)
-        layout.addWidget(heading("Timeline"))
+        layout.addWidget(heading(t("Timeline")))
         layout.addWidget(hint)
-        layout.addWidget(hbox(QLabel("Order by"), self.order, None))
+        layout.addWidget(hbox(QLabel(t("Order by")), self.order, None))
         layout.addWidget(self.table, 1)
 
     def reload(self):
@@ -221,7 +222,7 @@ class TimelineView(View):
                 sc["scene_time"] or "—",
                 str(number),
                 f"{chapter_numbers[sc['chapter_id']]}. {sc['chapter_title']}",
-                sc["title"] or "Untitled scene",
+                sc["title"] or t("Untitled scene"),
                 names.get(sc["pov_id"], ""),
                 places.get(sc["location_id"], ""),
                 STATUS_LABELS.get(sc["status"], ""),
@@ -251,10 +252,10 @@ class StatCard(QFrame):
 class AnalysisView(View):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.cards = {k: StatCard(t) for k, t in (
-            ("words", "words in the manuscript"), ("today", "words written today"),
-            ("chapters", "chapters"), ("scenes", "scenes"), ("done", "scenes done"),
-            ("avg", "average words per scene"),
+        self.cards = {k: StatCard(caption) for k, caption in (
+            ("words", t("words in the manuscript")), ("today", t("words written today")),
+            ("chapters", t("chapters")), ("scenes", t("scenes")), ("done", t("scenes done")),
+            ("avg", t("average words per scene")),
         )}
         grid = QGridLayout()
         for i, card in enumerate(self.cards.values()):
@@ -265,16 +266,16 @@ class AnalysisView(View):
         self.locations = QTableWidget()
         self.strands = QTableWidget()
         tabs = QTabWidget()
-        tabs.addTab(self.chapters, "Chapter lengths")
-        tabs.addTab(self.characters, "Characters by chapter")
-        tabs.addTab(self.locations, "Locations by chapter")
-        tabs.addTab(self.strands, "Strands by chapter")
-        for t in (self.chapters, self.characters, self.locations, self.strands):
-            t.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-            t.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        tabs.addTab(self.chapters, t("Chapter lengths"))
+        tabs.addTab(self.characters, t("Characters by chapter"))
+        tabs.addTab(self.locations, t("Locations by chapter"))
+        tabs.addTab(self.strands, t("Strands by chapter"))
+        for table in (self.chapters, self.characters, self.locations, self.strands):
+            table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+            table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(heading("Analysis"))
+        layout.addWidget(heading(t("Analysis")))
         layout.addLayout(grid)
         layout.addWidget(tabs, 1)
 
@@ -284,12 +285,12 @@ class AnalysisView(View):
         chapters = p.list("chapters")
         total = sum(s["words"] for s in scenes)
         done = sum(1 for s in scenes if s["status"] == "done")
-        self.cards["words"].value.setText(f"{total:,}")
-        self.cards["today"].value.setText(f"{p.words_today():,}")
+        self.cards["words"].value.setText(number(total))
+        self.cards["today"].value.setText(number(p.words_today()))
         self.cards["chapters"].value.setText(str(len(chapters)))
         self.cards["scenes"].value.setText(str(len(scenes)))
         self.cards["done"].value.setText(f"{done} / {len(scenes)}")
-        self.cards["avg"].value.setText(f"{total // len(scenes):,}" if scenes else "0")
+        self.cards["avg"].value.setText(number(total // len(scenes)) if scenes else "0")
 
         self._chapter_lengths(chapters, scenes)
         chapter_of = {s["id"]: s["chapter_id"] for s in scenes}
@@ -320,31 +321,31 @@ class AnalysisView(View):
             words[s["chapter_id"]] += s["words"]
             counts[s["chapter_id"]] += 1
         longest = max(words.values(), default=0) or 1
-        t = self.chapters
-        t.clear()
-        t.setColumnCount(4)
-        t.setHorizontalHeaderLabels(["Chapter", "Scenes", "Words", ""])
-        t.setRowCount(len(chapters))
-        t.verticalHeader().hide()
+        table = self.chapters
+        table.clear()
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels([t("Chapter"), t("Scenes"), t("Words"), ""])
+        table.setRowCount(len(chapters))
+        table.verticalHeader().hide()
         for row, c in enumerate(chapters):
-            t.setItem(row, 0, QTableWidgetItem(f"{row + 1}. {c['title']}"))
-            t.setItem(row, 1, QTableWidgetItem(str(counts[c["id"]])))
-            t.setItem(row, 2, QTableWidgetItem(f"{words[c['id']]:,}"))
+            table.setItem(row, 0, QTableWidgetItem(f"{row + 1}. {c['title']}"))
+            table.setItem(row, 1, QTableWidgetItem(str(counts[c["id"]])))
+            table.setItem(row, 2, QTableWidgetItem(number(words[c["id"]])))
             bar = QProgressBar()
             bar.setRange(0, longest)
             bar.setValue(words[c["id"]])
             bar.setTextVisible(False)
             bar.setMaximumHeight(14)
-            t.setCellWidget(row, 3, bar)
-        t.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        t.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+            table.setCellWidget(row, 3, bar)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
 
     def _matrix(self, table, entities, chapters, presence):
         table.clear()
         table.setRowCount(len(entities))
         table.setColumnCount(len(chapters) + 1)
-        table.setHorizontalHeaderLabels(["Total"] + [str(n) for n in range(1, len(chapters) + 1)])
-        table.setVerticalHeaderLabels([e["name"] or "(unnamed)" for e in entities])
+        table.setHorizontalHeaderLabels([t("Total")] + [str(n) for n in range(1, len(chapters) + 1)])
+        table.setVerticalHeaderLabels([e["name"] or t("(unnamed)") for e in entities])
         for col, c in enumerate(chapters, start=1):
             table.horizontalHeaderItem(col).setToolTip(c["title"])
         accent = QColor("#5b7cbf")
@@ -365,49 +366,49 @@ class AnalysisView(View):
 
 
 class ExportDialog(QDialog):
-    KDP_LABEL = "Amazon KDP paperback (.pdf) — Premium"
+    KDP_LABEL = t("Amazon KDP paperback (.pdf) — Premium")
 
     def __init__(self, project, parent=None, session=None):
         super().__init__(parent)
         self.project = project
         self.session = session
-        self.setWindowTitle("Export manuscript")
+        self.setWindowTitle(t("Export manuscript"))
         self.format = QComboBox()
-        for label, ext in export.FORMATS.items():
-            self.format.addItem(label, ext)
+        for label, ext in export.FORMATS.items():   # English in export.py, shown translated
+            self.format.addItem(t(label), ext)
         if cloud.configured():   # Premium only exists where the service does
             self.format.addItem(self.KDP_LABEL, "kdp")
         self.trim = QComboBox()
         self.trim.addItems(kdp.TRIM_SIZES)
         self.trim.setCurrentText(kdp.DEFAULT_TRIM)
         self.paper = QComboBox()
-        self.paper.addItems(kdp.PAPERS)
+        for paper in kdp.PAPERS:                     # English in kdp.py, shown translated
+            self.paper.addItem(t(paper), paper)
         self.font_size = QSpinBox()
         self.font_size.setRange(9, 14)
         self.font_size.setValue(11)
         self.font_size.setSuffix(" pt")
-        self.kdp_note = QLabel("A print-ready interior: margins and gutter sized for KDP, chapters "
-                               "opening on right-hand pages, fonts embedded. No bleed.")
+        self.kdp_note = QLabel(t("A print-ready interior: margins and gutter sized for KDP, chapters opening on right-hand pages, fonts embedded. No bleed."))
         self.kdp_note.setObjectName("hint")
         self.kdp_note.setWordWrap(True)
-        self.title_page = QCheckBox("Title page")
-        self.chapter_titles = QCheckBox("Chapter titles")
-        self.number = QCheckBox("Number chapters")
-        self.only_done = QCheckBox("Only scenes marked “Done”")
+        self.title_page = QCheckBox(t("Title page"))
+        self.chapter_titles = QCheckBox(t("Chapter titles"))
+        self.number = QCheckBox(t("Number chapters"))
+        self.only_done = QCheckBox(t("Only scenes marked “Done”"))
         for box in (self.title_page, self.chapter_titles, self.number):
             box.setChecked(True)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
-        go = buttons.addButton("Export…", QDialogButtonBox.ButtonRole.AcceptRole)
+        go = buttons.addButton(t("Export…"), QDialogButtonBox.ButtonRole.AcceptRole)
         go.setDefault(True)
         buttons.accepted.connect(self._export)
         buttons.rejected.connect(self.reject)
         form = QFormLayout(self)
-        form.addRow("Format", self.format)
+        form.addRow(t("Format"), self.format)
         form.addRow("", self.title_page)
         form.addRow("", self.chapter_titles)
         form.addRow("", self.number)
         form.addRow("", self.only_done)
-        self.kdp_rows = [("Trim size", self.trim), ("Paper", self.paper), ("Font size", self.font_size),
+        self.kdp_rows = [(t("Trim size"), self.trim), (t("Paper"), self.paper), (t("Font size"), self.font_size),
                          ("", self.kdp_note)]
         for label, widget in self.kdp_rows:
             form.addRow(label, widget)
@@ -436,7 +437,7 @@ class ExportDialog(QDialog):
             self._check_premium()
             return
         default = str(self.project.path.with_suffix(f".{ext}"))
-        path, _ = QFileDialog.getSaveFileName(self, "Export manuscript", default, f"*.{ext}")
+        path, _ = QFileDialog.getSaveFileName(self, t("Export manuscript"), default, f"*.{ext}")
         if not path:
             return
         if not path.endswith(f".{ext}"):
@@ -445,7 +446,7 @@ class ExportDialog(QDialog):
         try:
             export.export(self.project, path, ext, options)
         except Exception as exc:  # show any failure to the writer rather than crash
-            QMessageBox.critical(self, "Export failed", str(exc))
+            QMessageBox.critical(self, t("Export failed"), str(exc))
             return
         self.exported_path = path
         self.accept()
@@ -455,53 +456,53 @@ class ExportDialog(QDialog):
         if self.session is None:
             QMessageBox.information(
                 self, "Candle Premium",
-                "Print-ready KDP files are part of <b>Candle Premium</b>.<br><br>"
-                "Sign in under <b>Account → Sign in…</b>, then get Premium in <b>Account → Account…</b>.")
+                t("Print-ready KDP files are part of <b>Candle Premium</b>.") + "<br><br>" +
+                t("Sign in under <b>Account → Sign in…</b>, then get Premium in <b>Account → Account…</b>."))
             return
         from ..account import run_async
         self.go.setEnabled(False)
-        self.go.setText("Checking your account…")
+        self.go.setText(t("Checking your account…"))
 
         def checked(me):
             self.go.setEnabled(True)
-            self.go.setText("Export…")
+            self.go.setText(t("Export…"))
             if me.get("premium"):
                 self._export_kdp()
             else:
                 QMessageBox.information(
                     self, "Candle Premium",
-                    "Print-ready KDP files are part of <b>Candle Premium</b>. "
-                    "Get it in <b>Account → Account…</b>.")
+                    t("Print-ready KDP files are part of <b>Candle Premium</b>.") + " " +
+                    t("Get it in <b>Account → Account…</b>."))
 
         def failed(exc):
             self.go.setEnabled(True)
-            self.go.setText("Export…")
-            QMessageBox.warning(self, "Candle Premium", f"Couldn't check your account.\n\n{exc}")
+            self.go.setText(t("Export…"))
+            QMessageBox.warning(self, "Candle Premium", t("Couldn't check your account.") + f"\n\n{exc}")
 
         run_async(self.session.me, checked, failed)
 
     def _export_kdp(self):
         default = str(self.project.path.with_name(self.project.path.stem + " - KDP interior.pdf"))
-        path, _ = QFileDialog.getSaveFileName(self, "Export KDP paperback interior", default, "*.pdf")
+        path, _ = QFileDialog.getSaveFileName(self, t("Export KDP paperback interior"), default, "*.pdf")
         if not path:
             return
         if not path.endswith(".pdf"):
             path += ".pdf"
-        layout = kdp.Layout(trim=self.trim.currentText(), paper=self.paper.currentText(),
+        layout = kdp.Layout(trim=self.trim.currentText(), paper=self.paper.currentData(),
                             font_size=self.font_size.value())
         try:
             result = kdp.write_kdp_pdf(self.project, path, self._options(), layout)
         except Exception as exc:  # show any failure to the writer rather than crash
-            QMessageBox.critical(self, "Export failed", str(exc))
+            QMessageBox.critical(self, t("Export failed"), str(exc))
             return
         trim = layout.trim.split(" (")[0]
         notes = "".join(f"<br><br>⚠ {w}" for w in result.warnings)
         QMessageBox.information(
-            self, "KDP interior ready",
-            f"<b>{result.pages} pages</b>, {trim}, inside margin {result.inside:g} in.<br><br>"
-            f"When you upload it to KDP, choose:<br>"
-            f"• Trim size: <b>{trim}</b><br>• Bleed: <b>No bleed</b><br>"
-            f"• Paper: <b>{layout.paper.split()[0]}</b><br><br>"
-            f"Order a proof copy before publishing.{notes}")
+            self, t("KDP interior ready"),
+            t("<b>{pages} pages</b>, {trim}, inside margin {margin} in.", pages=result.pages, trim=trim, margin=f"{result.inside:g}") +
+            "<br><br>" + t("When you upload it to KDP, choose:") + "<br>" +
+            t("• Trim size: <b>{trim}</b>", trim=trim) + "<br>" + t("• Bleed: <b>No bleed</b>") + "<br>" +
+            t("• Paper: <b>{paper}</b>", paper=t(layout.paper)) + "<br><br>" +
+            t("Order a proof copy before publishing.") + notes)
         self.exported_path = path
         self.accept()

@@ -20,6 +20,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from .i18n import t, translate_message
+
 # The Candle Premium service (see candle_premium/README.md). The environment
 # variables override these, e.g. to try a test deployment; set them empty to
 # build or run Candle without Premium (the Account menu then stays hidden).
@@ -36,11 +38,11 @@ SECURE_TOKEN = "https://securetoken.googleapis.com/v1/token"
 SQLITE_MAGIC = b"SQLite format 3\x00"
 
 FIREBASE_ERRORS = {
-    "TOO_MANY_ATTEMPTS_TRY_LATER": "Too many attempts. Wait a few minutes and try again.",
-    "USER_DISABLED": "This account has been disabled.",
-    "TOKEN_EXPIRED": "Your session has expired. Sign in again.",
-    "INVALID_REFRESH_TOKEN": "Your session has expired. Sign in again.",
-    "USER_NOT_FOUND": "Your session has expired. Sign in again.",
+    "TOO_MANY_ATTEMPTS_TRY_LATER": t("Too many attempts. Wait a few minutes and try again."),
+    "USER_DISABLED": t("This account has been disabled."),
+    "TOKEN_EXPIRED": t("Your session has expired. Sign in again."),
+    "INVALID_REFRESH_TOKEN": t("Your session has expired. Sign in again."),
+    "USER_NOT_FOUND": t("Your session has expired. Sign in again."),
 }
 SESSION_ENDED = {"TOKEN_EXPIRED", "INVALID_REFRESH_TOKEN", "USER_NOT_FOUND", "USER_DISABLED"}
 
@@ -72,7 +74,7 @@ def _http(method, url, *, json_body=None, form=None, data=None, headers=None, ti
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read()
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise CloudError(f"Can't reach the Candle servers. Check your internet connection.\n\n({exc})")
+        raise CloudError(t("Can't reach the Candle servers. Check your internet connection.") + f"\n\n({exc})")
 
 
 def _firebase(endpoint, body):
@@ -80,7 +82,7 @@ def _firebase(endpoint, body):
     payload = json.loads(raw or b"{}")
     if status >= 400:
         code = payload.get("error", {}).get("message", "").split(" ")[0]
-        raise CloudError(FIREBASE_ERRORS.get(code, f"Sign-in failed ({code or status})."),
+        raise CloudError(FIREBASE_ERRORS.get(code, t("Sign-in failed ({code}).", code=code or status)),
                          status, code in SESSION_ENDED)
     return payload
 
@@ -89,7 +91,7 @@ def plans():
     """What Premium costs; public, so it can be shown before signing in."""
     status, raw = _http("GET", f"{API_URL}/v1/plans")
     if status >= 400:
-        raise CloudError(f"The Candle server answered with an error ({status}).", status)
+        raise CloudError(t("The Candle server answered with an error ({status}).", status=status), status)
     return json.loads(raw)
 
 
@@ -115,7 +117,7 @@ class Session:
                 payload = json.loads(raw or b"{}")
                 if status >= 400:
                     code = payload.get("error", {}).get("message", "").split(" ")[0]
-                    raise CloudError(FIREBASE_ERRORS.get(code, "Sign in again."), status, True)
+                    raise CloudError(FIREBASE_ERRORS.get(code, t("Sign in again.")), status, True)
                 self.refresh_token = payload["refresh_token"]
                 self._id_token = payload["id_token"]
                 self._expires = time.time() + int(payload.get("expires_in", 3600)) - 60
@@ -133,7 +135,7 @@ class Session:
                 detail = json.loads(raw).get("detail")
             except ValueError:
                 detail = None
-            raise CloudError(detail or f"The Candle server answered with an error ({status}).",
+            raise CloudError(translate_message(detail) if detail else t("The Candle server answered with an error ({status}).", status=status),
                              status, status == 401)
         return json.loads(raw) if raw else None
 
@@ -155,14 +157,14 @@ class Session:
             data = f.read()
         status, raw = _http(upload["method"], upload["url"], data=data, headers=upload["headers"], timeout=300)
         if status >= 400:
-            raise CloudError(f"The upload failed ({status}).", status)
+            raise CloudError(t("The upload failed ({status}).", status=status), status)
         return self._api("POST", f"/v1/projects/{project_id}/backups/{started['backup_id']}/complete")
 
     def download(self, project_id, backup_id, target):
         url = self._api("GET", f"/v1/projects/{project_id}/backups/{backup_id}/download")["url"]
         status, data = _http("GET", url, timeout=300)
         if status >= 400 or not data.startswith(SQLITE_MAGIC):
-            raise CloudError(f"The download failed ({status}).", status)
+            raise CloudError(t("The download failed ({status}).", status=status), status)
         with open(target, "xb") as f:
             f.write(data)
         return target
@@ -183,11 +185,11 @@ class Session:
         self._api("DELETE", "/v1/account")
 
 
-SIGNED_IN_PAGE = b"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Signed in to Candle</title>
+SIGNED_IN_PAGE = ("""<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>""" + t("Signed in to Candle") + """</title>
 <style>body{font:17px/1.5 system-ui,sans-serif;max-width:30em;margin:15vh auto;padding:0 16px;
 color:#222;background:#fdfbf7}@media(prefers-color-scheme:dark){body{color:#eee;background:#1d1c1a}}</style>
-</head><body><h1>You're signed in</h1><p>Go back to Candle. You can close this tab.</p></body></html>"""
+</head><body><h1>""" + t("You're signed in") + "</h1><p>" + t("Go back to Candle. You can close this tab.") + "</p></body></html>").encode()
 
 
 class BrowserSignIn:
@@ -239,9 +241,9 @@ class BrowserSignIn:
         try:
             while self._received is None:
                 if self._cancelled.is_set():
-                    raise CloudError("Sign-in cancelled.")
+                    raise CloudError(t("Sign-in cancelled."))
                 if time.monotonic() > deadline:
-                    raise CloudError("Sign-in took too long. Try again.")
+                    raise CloudError(t("Sign-in took too long. Try again."))
                 self._server.handle_request()
         finally:
             self._server.server_close()

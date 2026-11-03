@@ -7,6 +7,12 @@ import sqlite3
 import uuid
 from pathlib import Path
 
+try:
+    from .i18n import t
+except ImportError:   # loaded on its own (Candle's server tests): English
+    def t(key, **values):
+        return key.format(**values)
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
@@ -106,10 +112,12 @@ STATUSES = ("todo", "progress", "done")
 
 _IDENT = re.compile(r"^[a-z_]+$")
 _WORD = re.compile(r"\w+(?:['’\-]\w+)*")
+_CJK = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")   # kana, hanzi/kanji
 
 
 def count_words(text):
-    return len(_WORD.findall(text))
+    """Words, and in Chinese and Japanese (written without spaces) each character, as word processors count."""
+    return len(_CJK.findall(text)) + len(_WORD.findall(_CJK.sub(" ", text)))
 
 
 def _ident(name):
@@ -141,8 +149,8 @@ class Project:
         project.set_meta("title", title)
         project.set_meta("author", author)
         project.set_meta("created", datetime.datetime.now().isoformat(timespec="seconds"))
-        chapter = project.insert("chapters", title="Chapter 1")
-        project.insert("scenes", chapter_id=chapter, title="Scene 1")
+        chapter = project.insert("chapters", title=t("Chapter {n}", n=1))
+        project.insert("scenes", chapter_id=chapter, title=t("Scene {n}", n=1))
         return project
 
     def close(self):

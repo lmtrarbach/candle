@@ -7,10 +7,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from ..i18n import number, t, tn
 from ..widgets import CheckList, Debouncer, RichEditor, heading, hbox
 from .base import View, confirm
 
-STATUS_LABELS = {"todo": "To do", "progress": "In progress", "done": "Done"}
+STATUS_LABELS = {"todo": t("To do"), "progress": t("In progress"), "done": t("Done")}
 STATUS_MARKS = {"todo": ("○", "#9a9a9a"), "progress": ("◐", "#d9952b"), "done": ("●", "#3c9a5f")}
 
 ROLE = Qt.ItemDataRole.UserRole
@@ -37,18 +38,18 @@ class ChapterPanel(QWidget):
 
         self.title = QLineEdit()
         self.title.setObjectName("titleEdit")
-        self.title.setPlaceholderText("Chapter title")
+        self.title.setPlaceholderText(t("Chapter title"))
         self.title.textEdited.connect(self._title_edited)
         self.stats = QLabel()
         self.stats.setObjectName("hint")
 
-        self.reason = RichEditor("Why does this chapter exist? What changes between its beginning and end?")
-        self.notes = RichEditor("Notes, ideas, research for this chapter…")
+        self.reason = RichEditor(t("Why does this chapter exist? What changes between its beginning and end?"))
+        self.notes = RichEditor(t("Notes, ideas, research for this chapter…"))
         for editor in (self.reason, self.notes):
             editor.changed.connect(self.saver.poke)
         tabs = QTabWidget()
-        tabs.addTab(self.reason, "Purpose")
-        tabs.addTab(self.notes, "Notes")
+        tabs.addTab(self.reason, t("Purpose"))
+        tabs.addTab(self.notes, t("Notes"))
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.title)
@@ -64,7 +65,7 @@ class ChapterPanel(QWidget):
         scenes = project.list("scenes", chapter_id=chapter_id)
         words = sum(s["words"] for s in scenes)
         done = sum(1 for s in scenes if s["status"] == "done")
-        self.stats.setText(f"{len(scenes)} scenes · {done} done · {words:,} words")
+        self.stats.setText(f"{tn(len(scenes), '{n} scene', '{n} scenes')} · {t('{n} done', n=done)} · {tn(words, '{n} word', '{n} words')}")
 
     def _title_edited(self):
         self.saver.poke()
@@ -90,13 +91,13 @@ class ScenePanel(QWidget):
         # Header
         self.title = QLineEdit()
         self.title.setObjectName("titleEdit")
-        self.title.setPlaceholderText("Scene title")
+        self.title.setPlaceholderText(t("Scene title"))
         self.title.textEdited.connect(self.saver.poke)
         self.status = QComboBox()
         for key, label in STATUS_LABELS.items():
             self.status.addItem(label, key)
         self.status.activated.connect(self._meta_changed)
-        self.details_btn = QPushButton("Details ▸")
+        self.details_btn = QPushButton(t("Details") + " ▸")
         self.details_btn.setCheckable(True)
         self.details_btn.setChecked(True)
         self.details_btn.toggled.connect(self._toggle_details)
@@ -107,7 +108,7 @@ class ScenePanel(QWidget):
         self.header.layout().setStretch(0, 1)
 
         # Editor
-        self.editor = RichEditor("Once upon a time…")
+        self.editor = RichEditor(t("Once upon a time…"))
         self.editor.changed.connect(self.saver.poke)
 
         # Details panel
@@ -116,8 +117,8 @@ class ScenePanel(QWidget):
         self.location = QComboBox()
         self.location.activated.connect(self._meta_changed)
         self.time = QLineEdit()
-        self.time.setPlaceholderText("e.g. 1888-08-31 03:40")
-        self.time.setToolTip("When the scene happens. Use YYYY-MM-DD HH:MM so the timeline can sort it.")
+        self.time.setPlaceholderText(t("e.g. 1888-08-31 03:40"))
+        self.time.setToolTip(t("When the scene happens. Use YYYY-MM-DD HH:MM so the timeline can sort it."))
         self.time.textEdited.connect(self.saver.poke)
         self.characters = CheckList()
         self.strands = CheckList()
@@ -126,26 +127,26 @@ class ScenePanel(QWidget):
         self.strands.toggled.connect(lambda i, on: self._link("strand", i, on))
         self.objects.toggled.connect(lambda i, on: self._link("object", i, on))
         self.notes = QPlainTextEdit()
-        self.notes.setPlaceholderText("Notes for this scene…")
+        self.notes.setPlaceholderText(t("Notes for this scene…"))
         self.notes.textChanged.connect(self.saver.poke)
-        snapshot = QPushButton("Save revision")
-        snapshot.setToolTip("Keep a copy of the current text that you can go back to later")
+        snapshot = QPushButton(t("Save revision"))
+        snapshot.setToolTip(t("Keep a copy of the current text that you can go back to later"))
         snapshot.clicked.connect(self._snapshot)
-        history = QPushButton("Revisions…")
+        history = QPushButton(t("Revisions…"))
         history.clicked.connect(self._show_revisions)
 
         details = QWidget()
         details.setObjectName("sidePanel")
         form = QFormLayout(details)
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapAllRows)
-        form.addRow("Point of view", self.pov)
-        form.addRow("Location", self.location)
-        form.addRow("Time", self.time)
-        for label, widget in (("Characters", self.characters), ("Narrative strands", self.strands),
-                              ("Objects", self.objects)):
+        form.addRow(t("Point of view"), self.pov)
+        form.addRow(t("Location"), self.location)
+        form.addRow(t("Time"), self.time)
+        for label, widget in ((t("Characters"), self.characters), (t("Narrative strands"), self.strands),
+                              (t("Objects"), self.objects)):
             widget.setMinimumHeight(90)
             form.addRow(label, widget)
-        form.addRow("Notes", self.notes)
+        form.addRow(t("Notes"), self.notes)
         form.addRow(hbox(snapshot, history))
         self.details = QScrollArea()
         self.details.setWidgetResizable(True)
@@ -213,12 +214,12 @@ class ScenePanel(QWidget):
 
     def _toggle_details(self, on):
         self.details.setVisible(on)
-        self.details_btn.setText("Details ▸" if on else "◂ Details")
+        self.details_btn.setText(t("Details") + " ▸" if on else "◂ " + t("Details"))
 
     def _snapshot(self):
         self.saver.flush()
         self.project.add_revision(self.scene_id)
-        self.window().statusBar().showMessage("Revision saved.", 3000)
+        self.window().statusBar().showMessage(t("Revision saved."), 3000)
 
     def _show_revisions(self):
         self.saver.flush()
@@ -234,15 +235,15 @@ class ScenePanel(QWidget):
         self.details_btn.setVisible(not full)
         self.details.setVisible(not (full or focus) and self.details_btn.isChecked())
         self.full_btn.setChecked(full)
-        self.full_btn.setText("Exit full view" if full else "Full view")
-        self.full_btn.setToolTip(("Show the side panels again" if full else
-                                  "Give the whole window to the text") + "  (Ctrl+Shift+F)")
+        self.full_btn.setText(t("Exit full view") if full else t("Full view"))
+        self.full_btn.setToolTip((t("Show the side panels again") if full else
+                                  t("Give the whole window to the text")) + "  (Ctrl+Shift+F)")
 
 
 class RevisionsDialog(QDialog):
     def __init__(self, project, scene_id, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Scene revisions")
+        self.setWindowTitle(t("Scene revisions"))
         self.resize(820, 560)
         self.project, self.scene_id = project, scene_id
         self.restored = None
@@ -250,9 +251,9 @@ class RevisionsDialog(QDialog):
         self.list = QListWidget()
         self.preview = QTextBrowser()
         self.list.currentItemChanged.connect(self._preview)
-        restore = QPushButton("Restore this revision")
+        restore = QPushButton(t("Restore this revision"))
         restore.clicked.connect(self._restore)
-        delete = QPushButton("Delete")
+        delete = QPushButton(t("Delete"))
         delete.clicked.connect(self._delete)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
@@ -262,7 +263,7 @@ class RevisionsDialog(QDialog):
         splitter.addWidget(self.preview)
         splitter.setSizes([240, 580])
         layout = QVBoxLayout(self)
-        hint = QLabel("Restoring first saves the current text as a revision, so nothing is lost.")
+        hint = QLabel(t("Restoring first saves the current text as a revision, so nothing is lost."))
         hint.setObjectName("hint")
         layout.addWidget(hint)
         layout.addWidget(splitter, 1)
@@ -272,13 +273,13 @@ class RevisionsDialog(QDialog):
     def _fill(self):
         self.list.clear()
         for rev in self.project.revisions(self.scene_id):
-            item = QListWidgetItem(f"{rev['created']}  ·  {rev['words']:,} words")
+            item = QListWidgetItem(f"{rev['created']}  ·  {tn(rev['words'], '{n} word', '{n} words')}")
             item.setData(ROLE, rev["id"])
             self.list.addItem(item)
         if self.list.count():
             self.list.setCurrentRow(0)
         else:
-            self.preview.setPlainText("No revisions yet. Use “Save revision” to keep a copy of a scene.")
+            self.preview.setPlainText(t("No revisions yet. Use “Save revision” to keep a copy of a scene."))
 
     def _current(self):
         item = self.list.currentItem()
@@ -299,7 +300,7 @@ class RevisionsDialog(QDialog):
 
     def _delete(self):
         rev = self._current()
-        if rev and confirm(self, "Delete revision", "Delete this revision?"):
+        if rev and confirm(self, t("Delete revision"), t("Delete this revision?")):
             self.project.delete("scene_revisions", rev["id"])
             self._fill()
 
@@ -311,7 +312,7 @@ class ChaptersView(View):
         super().__init__(parent)
 
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Chapters & scenes", "Words"])
+        self.tree.setHeaderLabels([t("Chapters & scenes"), t("Words")])
         self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.tree.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.tree.header().setStretchLastSection(False)
@@ -319,11 +320,11 @@ class ChaptersView(View):
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._context_menu)
 
-        add_chapter = QPushButton("+ Chapter")
+        add_chapter = QPushButton(t("+ Chapter"))
         add_chapter.clicked.connect(self.add_chapter)
-        add_scene = QPushButton("+ Scene")
+        add_scene = QPushButton(t("+ Scene"))
         add_scene.clicked.connect(self.add_scene)
-        delete = QPushButton("Delete")
+        delete = QPushButton(t("Delete"))
         delete.clicked.connect(self.delete)
         up = QPushButton("↑")
         up.clicked.connect(lambda: self.move(-1))
@@ -335,7 +336,7 @@ class ChaptersView(View):
         self.left = QWidget()
         self.left.setObjectName("sidePanel")
         lv = QVBoxLayout(self.left)
-        lv.addWidget(heading("Chapters"))
+        lv.addWidget(heading(t("Chapters")))
         lv.addWidget(self.tree, 1)
         lv.addWidget(hbox(add_chapter, add_scene, None, up, down))
         lv.addWidget(hbox(delete, None))
@@ -345,7 +346,7 @@ class ChaptersView(View):
         self.scene_panel = ScenePanel()
         self.scene_panel.changed.connect(self._scene_changed)
         self.scene_panel.full_view_clicked.connect(self.full_view_requested)
-        empty = QLabel("Select a chapter or scene, or create a new one.")
+        empty = QLabel(t("Select a chapter or scene, or create a new one."))
         empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         empty.setObjectName("hint")
         self.stack = QStackedWidget()
@@ -392,19 +393,19 @@ class ChaptersView(View):
             self.scene_panel.saver.flush()
             self.scene_panel.load(self.project, self.scene_panel.scene_id)
 
-    def _label_chapter(self, item, ch, number, words):
-        item.setText(0, f"{number}. {ch['title'] or 'Untitled chapter'}")
-        item.setText(1, f"{words:,}")
+    def _label_chapter(self, item, ch, position, words):
+        item.setText(0, f"{position}. {ch['title'] or t('Untitled chapter')}")
+        item.setText(1, number(words))
         font = item.font(0)
         font.setBold(True)
         item.setFont(0, font)
 
     def _label_scene(self, item, sc):
         mark, color = STATUS_MARKS.get(sc["status"], STATUS_MARKS["todo"])
-        item.setText(0, f"{mark}  {sc['title'] or 'Untitled scene'}")
+        item.setText(0, f"{mark}  {sc['title'] or t('Untitled scene')}")
         item.setForeground(0, QBrush(QColor(color)) if sc["status"] != "todo" else QBrush())
         item.setToolTip(0, STATUS_LABELS.get(sc["status"], ""))
-        item.setText(1, f"{sc['words']:,}")
+        item.setText(1, number(sc["words"]))
 
     def _find(self, kind, row_id):
         for i in range(self.tree.topLevelItemCount()):
@@ -480,7 +481,7 @@ class ChaptersView(View):
     def add_chapter(self):
         self.flush()
         n = len(self.project.list("chapters")) + 1
-        chapter_id = self.project.insert("chapters", title=f"Chapter {n}")
+        chapter_id = self.project.insert("chapters", title=t("Chapter {n}", n=n))
         self.reload()
         self.select("chapter", chapter_id)
         self.chapter_panel.title.setFocus()
@@ -497,7 +498,7 @@ class ChaptersView(View):
             else:
                 chapter_id = chapters[-1]["id"]
         n = len(self.project.list("scenes", chapter_id=chapter_id)) + 1
-        scene_id = self.project.insert("scenes", chapter_id=chapter_id, title=f"Scene {n}")
+        scene_id = self.project.insert("scenes", chapter_id=chapter_id, title=t("Scene {n}", n=n))
         self.reload()
         self.select("scene", scene_id)
         self.scene_panel.title.setFocus()
@@ -510,10 +511,10 @@ class ChaptersView(View):
             return
         kind, row_id = key
         if kind == "chapter":
-            text = "Delete this chapter and all of its scenes? This cannot be undone."
+            title, text = t("Delete chapter"), t("Delete this chapter and all of its scenes? This cannot be undone.")
         else:
-            text = "Delete this scene? This cannot be undone."
-        if not confirm(self, f"Delete {kind}", text):
+            title, text = t("Delete scene"), t("Delete this scene? This cannot be undone.")
+        if not confirm(self, title, text):
             return
         self.chapter_panel.saver.timer.stop()
         self.scene_panel.saver.timer.stop()
@@ -546,22 +547,22 @@ class ChaptersView(View):
     def _context_menu(self, pos):
         item = self.tree.itemAt(pos)
         menu = QMenu(self)
-        menu.addAction("New chapter", self.add_chapter)
-        menu.addAction("New scene", self.add_scene)
+        menu.addAction(t("New chapter"), self.add_chapter)
+        menu.addAction(t("New scene"), self.add_scene)
         if item and item_key(item)[0] == "scene":
             scene_id = item_key(item)[1]
-            move_menu = menu.addMenu("Move to chapter")
+            move_menu = menu.addMenu(t("Move to chapter"))
             for n, ch in enumerate(self.project.list("chapters"), start=1):
                 move_menu.addAction(
                     f"{n}. {ch['title']}",
                     lambda c=ch["id"]: self._move_to(scene_id, c),
                 )
-            status_menu = menu.addMenu("Status")
+            status_menu = menu.addMenu(t("Status"))
             for key, label in STATUS_LABELS.items():
                 status_menu.addAction(label, lambda k=key: self._set_status(scene_id, k))
         if item:
             menu.addSeparator()
-            menu.addAction("Delete", self.delete)
+            menu.addAction(t("Delete"), self.delete)
         menu.exec(self.tree.viewport().mapToGlobal(pos))
 
     def _move_to(self, scene_id, chapter_id):

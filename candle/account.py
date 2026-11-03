@@ -11,13 +11,10 @@ from PySide6.QtWidgets import (
 )
 
 from . import cloud
+from .i18n import locale, number, t, tn
 from .widgets import hbox
 
-PRIVACY_NOTE = (
-    "Signing in is optional. With Candle Premium, copies of your projects are "
-    "uploaded to a private folder on Candle's cloud storage (Google Cloud) that "
-    "only your account can open. Without an account, Candle never goes online."
-)
+PRIVACY_NOTE = t("Signing in is optional. With Candle Premium, copies of your projects are uploaded to a private folder on Candle's cloud storage (Google Cloud) that only your account can open. Without an account, Candle never goes online.")
 
 _running = set()
 
@@ -62,8 +59,7 @@ def open_billing(get_url, button, status):
     def opened(url):
         button.setEnabled(True)
         QDesktopServices.openUrl(QUrl(url))
-        status.setText("Continue in your browser. When you're done, close and reopen this "
-                       "window to see the change.")
+        status.setText(t("Continue in your browser. When you're done, close and reopen this window to see the change."))
 
     def failed(exc):
         button.setEnabled(True)
@@ -73,8 +69,8 @@ def open_billing(get_url, button, status):
 
 
 def support_label():
-    label = QLabel(f"Questions about your account or a payment? "
-                   f"<a href='mailto:{cloud.SUPPORT_EMAIL}'>{cloud.SUPPORT_EMAIL}</a>")
+    label = QLabel(t("Questions about your account or a payment?") +
+                   f" <a href='mailto:{cloud.SUPPORT_EMAIL}'>{cloud.SUPPORT_EMAIL}</a>")
     label.setObjectName("hint")
     label.setOpenExternalLinks(True)
     label.setWordWrap(True)
@@ -84,7 +80,7 @@ def support_label():
 def human_size(n):
     for unit in ("bytes", "KB", "MB", "GB"):
         if n < 1024 or unit == "GB":
-            return f"{n:,.0f} {unit}" if unit == "bytes" else f"{n:,.1f} {unit}"
+            return tn(int(n), "{n} byte", "{n} bytes") if unit == "bytes" else f"{number(round(n, 1))} {unit}"
         n /= 1024
 
 
@@ -102,23 +98,22 @@ class SignInDialog(QDialog):
         self.session = None
         self.flow = None
 
-        heading = QLabel("Sign in to Candle")
+        heading = QLabel(t("Sign in to Candle"))
         heading.setObjectName("heading1")
         note = QLabel(PRIVACY_NOTE)
         note.setObjectName("hint")
         note.setWordWrap(True)
-        self.status = QLabel("Your browser opens so you can sign in with Google or your email, "
-                             "or create an account.")
+        self.status = QLabel(t("Your browser opens so you can sign in with Google or your email, or create an account."))
         self.status.setWordWrap(True)
-        self.copy_link = QLabel("<a href='#'>Browser didn't open? Copy the link</a>")
+        self.copy_link = QLabel("<a href='#'>" + t("Browser didn't open? Copy the link") + "</a>")
         self.copy_link.linkActivated.connect(self._copy_link)
         self.copy_link.setVisible(False)
 
-        self.go_btn = QPushButton("Continue in browser")
+        self.go_btn = QPushButton(t("Continue in browser"))
         self.go_btn.setObjectName("primary")
         self.go_btn.setDefault(True)
         self.go_btn.clicked.connect(self._start)
-        cancel = QPushButton("Cancel")
+        cancel = QPushButton(t("Cancel"))
         cancel.clicked.connect(self.reject)
 
         layout = QVBoxLayout(self)
@@ -144,21 +139,20 @@ class SignInDialog(QDialog):
                 if flow is self.flow and not flow._cancelled.is_set():
                     self.flow = None
                     self.status.setText(str(exc))
-                    self.go_btn.setText("Continue in browser")
+                    self.go_btn.setText(t("Continue in browser"))
 
             run_async(flow.wait, done, failed)
-        self.go_btn.setText("Open the browser again")
+        self.go_btn.setText(t("Open the browser again"))
         self.copy_link.setVisible(True)
         if QDesktopServices.openUrl(QUrl(self.flow.url)):
-            self.status.setText("Finish signing in in your browser, and keep this window open: "
-                                "it updates by itself.")
+            self.status.setText(t("Finish signing in in your browser, and keep this window open: it updates by itself."))
         else:
-            self.status.setText("Couldn't open your browser. Copy the link below into it.")
+            self.status.setText(t("Couldn't open your browser. Copy the link below into it."))
 
     def _copy_link(self):
         if self.flow:
             QGuiApplication.clipboard().setText(self.flow.url)
-            self.status.setText("Link copied. Paste it into your browser's address bar.")
+            self.status.setText(t("Link copied. Paste it into your browser's address bar."))
 
     def done(self, result):
         if self.flow and result != QDialog.DialogCode.Accepted:
@@ -174,28 +168,28 @@ class AccountDialog(QDialog):
     def __init__(self, session, parent=None):
         super().__init__(parent)
         self.session = session
-        self.setWindowTitle("Your account")
+        self.setWindowTitle(t("Your account"))
         self.setFixedWidth(480)
 
         heading = QLabel(session.email)
         heading.setObjectName("heading1")
-        self.status = QLabel("Checking your account…")
+        self.status = QLabel(t("Checking your account…"))
         self.status.setWordWrap(True)
         self.status.setOpenExternalLinks(True)
-        self.resend_btn = QPushButton("Resend confirmation email")
+        self.resend_btn = QPushButton(t("Resend confirmation email"))
         self.resend_btn.setVisible(False)
         self.resend_btn.clicked.connect(self._resend)
-        self.premium_btn = QPushButton("See Candle Premium…")
+        self.premium_btn = QPushButton(t("See Candle Premium…"))
         self.premium_btn.setObjectName("primary")
         self.premium_btn.setVisible(False)
         self.premium_btn.clicked.connect(lambda: PremiumDialog(self.session, self).exec())
-        self.manage_btn = QPushButton("Manage subscription…")
+        self.manage_btn = QPushButton(t("Manage subscription…"))
         self.manage_btn.setVisible(False)
         self.manage_btn.clicked.connect(
             lambda: open_billing(self.session.billing_portal_url, self.manage_btn, self.status))
-        sign_out = QPushButton("Sign out")
+        sign_out = QPushButton(t("Sign out"))
         sign_out.clicked.connect(self._sign_out)
-        delete = QPushButton("Delete account…")
+        delete = QPushButton(t("Delete account…"))
         delete.clicked.connect(self._delete)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
@@ -213,24 +207,24 @@ class AccountDialog(QDialog):
 
     def _show(self, me):
         if not me["email_verified"]:
-            self.status.setText("Your email address isn't confirmed yet. Open the link we emailed "
-                                "you, then reopen this window.")
+            self.status.setText(t("Your email address isn't confirmed yet. Open the link we emailed you, then reopen this window."))
             self.resend_btn.setVisible(True)
         elif not me["premium"]:
-            self.status.setText("Free account. Cloud backup comes with <b>Candle Premium</b>.")
+            self.status.setText(t("Free account. Cloud backup comes with <b>Candle Premium</b>."))
         else:
             limits = me["limits"]
             self.status.setText(
-                f"<b>Candle Premium</b> ✓<br>{me['projects']} of {limits['projects']} projects backed up, "
-                f"{human_size(me['bytes'])} in total. The latest {limits['backups_per_project']} "
-                "backups of each project are kept.")
+                "<b>Candle Premium</b> ✓<br>" +
+                t("{n} of {limit} projects backed up, {size} in total.", n=me["projects"], limit=limits["projects"],
+                  size=human_size(me["bytes"])) + " " +
+                t("The latest {n} backups of each project are kept.", n=limits["backups_per_project"]))
         self.premium_btn.setVisible(me["email_verified"] and me.get("can_subscribe", False))
         self.manage_btn.setVisible(me.get("can_manage_subscription", False))
 
     def _resend(self):
         self.resend_btn.setEnabled(False)
         run_async(self.session.send_verification,
-                  lambda _: self.status.setText("Sent. Check your inbox (and spam folder)."),
+                  lambda _: self.status.setText(t("Sent. Check your inbox (and spam folder).")),
                   lambda exc: self.status.setText(str(exc)))
 
     def _sign_out(self):
@@ -239,14 +233,14 @@ class AccountDialog(QDialog):
 
     def _delete(self):
         answer = QMessageBox.warning(
-            self, "Delete account",
-            "Delete your Candle account and <b>every cloud backup</b> of your projects?<br><br>"
-            "The .candle files on this computer are not touched. This can't be undone.",
+            self, t("Delete account"),
+            t("Delete your Candle account and <b>every cloud backup</b> of your projects?") + "<br><br>" +
+            t("The .candle files on this computer are not touched. This can't be undone."),
             QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes,
             QMessageBox.StandardButton.Cancel)
         if answer != QMessageBox.StandardButton.Yes:
             return
-        self.status.setText("Deleting…")
+        self.status.setText(t("Deleting…"))
         run_async(self.session.delete_account, lambda _: self._sign_out(),
                   lambda exc: self.status.setText(str(exc)))
 
@@ -255,20 +249,16 @@ class PremiumDialog(QDialog):
     """What Candle Premium is, what it costs, and the way to get or manage it."""
 
     FEATURES = [
-        ("🔥", "Lighter, your writing companion",
-         "Keeps you going: daily goals in words or pages, streaks, the pace your deadline needs, and "
-         "reminders. On the web it also asks small questions that light up your story."),
-        ("☁", "Every version of your projects",
-         "Each project is backed up when you open it and every hour while you write. The latest "
-         "{keep} versions of each are kept (free accounts keep the latest one)."),
-        ("📖", "Print-ready Amazon KDP paperbacks",
-         "Export a PDF interior in any of KDP's 16 trim sizes, with the margins KDP requires and "
-         "chapters opening on right-hand pages."),
-        ("💬", "Reviews",
-         "Share a version with readers you invite; they leave notes on passages and chapters."),
-        ("🔒", "Private",
-         "Your backups sit in a folder only your account can open. Cancel anytime: your backups "
-         "stay downloadable after Premium ends."),
+        ("🔥", t("Lighter, your writing companion"),
+         t("Keeps you going: daily goals in words or pages, streaks, the pace your deadline needs, and reminders. On the web it also asks small questions that light up your story.")),
+        ("☁", t("Every version of your projects"),
+         t("Each project is backed up when you open it and every hour while you write. The latest {keep} versions of each are kept (free accounts keep the latest one).")),
+        ("📖", t("Print-ready Amazon KDP paperbacks"),
+         t("Export a PDF interior in any of KDP's 16 trim sizes, with the margins KDP requires and chapters opening on right-hand pages.")),
+        ("💬", t("Reviews"),
+         t("Share a version with readers you invite; they leave notes on passages and chapters.")),
+        ("🔒", t("Private"),
+         t("Your backups sit in a folder only your account can open. Cancel anytime: your backups stay downloadable after Premium ends.")),
     ]
 
     def __init__(self, session=None, parent=None):
@@ -281,21 +271,21 @@ class PremiumDialog(QDialog):
 
         heading = QLabel("Candle Premium")
         heading.setObjectName("heading1")
-        intro = QLabel("Candle stays free. Premium adds:")
+        intro = QLabel(t("Candle stays free. Premium adds:"))
         intro.setObjectName("hint")
         self.features = QLabel(self._features_html(20))
         self.features.setWordWrap(True)
-        self.status = QLabel("Loading prices…")
+        self.status = QLabel(t("Loading prices…"))
         self.status.setWordWrap(True)
-        self.manage_btn = QPushButton("Manage subscription…")
+        self.manage_btn = QPushButton(t("Manage subscription…"))
         self.manage_btn.setVisible(False)
         self.manage_btn.clicked.connect(
             lambda: open_billing(self.session.billing_portal_url, self.manage_btn, self.status))
-        self.sign_in_btn = QPushButton("Sign in to get Premium")
+        self.sign_in_btn = QPushButton(t("Sign in to get Premium"))
         self.sign_in_btn.setObjectName("primary")
         self.sign_in_btn.setVisible(False)
         self.sign_in_btn.clicked.connect(self._sign_in)
-        close = QPushButton("Close")
+        close = QPushButton(t("Close"))
         close.clicked.connect(self.reject)
 
         layout = QVBoxLayout(self)
@@ -323,18 +313,18 @@ class PremiumDialog(QDialog):
     @staticmethod
     def _prices(plans):
         labels = [p["label"] for p in sorted(plans, key=lambda p: p["plan"] != "yearly")]
-        return " or ".join(labels)
+        return t(" or ").join(labels)
 
     def _show_offer(self, offer):
         """Signed out: what it costs, and a way in."""
         self.features.setText(self._features_html(offer["backups_per_project"]))
         if not offer["plans"]:
-            self.status.setText("Candle Premium isn't on sale yet.")
+            self.status.setText(t("Candle Premium isn't on sale yet."))
             return
         trial = offer.get("trial_days")
-        self.status.setText((f"<b>Free for {trial} days</b>, then " if trial else "") +
-                            f"<b>{self._prices(offer['plans'])}</b>. Sign in or create a free "
-                            "account first; it takes a minute in your browser.")
+        prices = f"<b>{self._prices(offer['plans'])}</b>"
+        self.status.setText((t("<b>Free for {n} days</b>, then {prices}.", n=trial, prices=prices) if trial else prices + ".") + " " +
+                            t("Sign in or create a free account first; it takes a minute in your browser."))
         self.sign_in_btn.setVisible(True)
 
     def _show_account(self, me):
@@ -342,31 +332,29 @@ class PremiumDialog(QDialog):
                                                                      me["limits"]["backups_per_project"])))
         if me["premium"] and me.get("trial_ends"):
             ends = datetime.datetime.fromisoformat(me["trial_ends"]).astimezone()
-            self.status.setText(f"<b>You're on a free trial of Candle Premium ✓</b> It ends on {ends:%d %B %Y}, "
-                                "when your plan starts. To stop it, cancel in <b>Manage subscription</b> "
-                                "before then and you won't be charged.")
+            self.status.setText("<b>" + t("You are on a free trial of Candle Premium ✓") + "</b> " +
+                                t("It ends on {date}, when your plan starts. To stop it, cancel in <b>Manage subscription</b> before then and you won't be charged.",
+                                  date=locale.toString(ends.date(), "d MMMM yyyy")))
         elif me["premium"]:
-            self.status.setText("<b>You have Candle Premium ✓</b> Thank you for supporting Candle.")
+            self.status.setText("<b>" + t("You have Candle Premium ✓") + "</b> " + t("Thank you for supporting Candle."))
         elif not me["email_verified"]:
-            self.status.setText("Confirm your email address first: open the link we emailed you, "
-                                "then reopen this window.")
+            self.status.setText(t("Confirm your email address first: open the link we emailed you, then reopen this window."))
         elif me.get("plans") and me.get("trial_days"):
-            self.status.setText(f"<b>Try it free for {me['trial_days']} days</b>, then "
-                                f"<b>{self._prices(me['plans'])}</b>. You add a card with Stripe and aren't "
-                                "charged until the trial ends; cancel before then and you pay nothing.")
+            self.status.setText(t("<b>Try it free for {n} days</b>, then {prices}.", n=me["trial_days"],
+                                  prices=f"<b>{self._prices(me['plans'])}</b>") + " " +
+                                t("You add a card with Stripe and aren't charged until the trial ends; cancel before then and you pay nothing."))
             self._offer(me["plans"], trial=True)
         elif me.get("plans"):
-            self.status.setText(f"<b>{self._prices(me['plans'])}</b>. Pay securely with Stripe; "
-                                "cancel anytime.")
+            self.status.setText(f"<b>{self._prices(me['plans'])}</b>. " + t("Pay securely with Stripe; cancel anytime."))
             self._offer(me["plans"])
         else:
-            self.status.setText("Candle Premium isn't on sale yet.")
+            self.status.setText(t("Candle Premium isn't on sale yet."))
         self.manage_btn.setVisible(me.get("can_manage_subscription", False))
 
     def _offer(self, plans, trial=False):
         # Yearly first and highlighted: it's the better deal.
         for plan in sorted(plans, key=lambda p: p["plan"] != "yearly"):
-            button = QPushButton(f"Free trial, then {plan['label']}" if trial else plan["label"])
+            button = QPushButton(t("Free trial, then {price}", price=plan["label"]) if trial else plan["label"])
             if plan["plan"] == "yearly":
                 button.setObjectName("primary")
             button.clicked.connect(lambda _=False, name=plan["plan"], b=button: open_billing(
@@ -387,26 +375,26 @@ class RestoreDialog(QDialog):
         self.session = session
         self.default_dir = Path(default_dir)
         self.restored_path = None
-        self.setWindowTitle("Restore from cloud")
+        self.setWindowTitle(t("Restore from cloud"))
         self.resize(620, 440)
 
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Project / backup", "Size"])
+        self.tree.setHeaderLabels([t("Project / backup"), t("Size")])
         self.tree.setColumnWidth(0, 420)
         self.tree.itemExpanded.connect(self._load_backups)
         self.tree.currentItemChanged.connect(self._selection_changed)
         self.tree.itemDoubleClicked.connect(lambda *_: self._restore())
-        self.status = QLabel("Loading…")
+        self.status = QLabel(t("Loading…"))
         self.status.setObjectName("hint")
         self.status.setWordWrap(True)
-        self.restore_btn = QPushButton("Restore…")
+        self.restore_btn = QPushButton(t("Restore…"))
         self.restore_btn.setObjectName("primary")
         self.restore_btn.setEnabled(False)
         self.restore_btn.clicked.connect(self._restore)
-        self.delete_btn = QPushButton("Delete from cloud…")
+        self.delete_btn = QPushButton(t("Delete from cloud…"))
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self._delete_project)
-        close = QPushButton("Close")
+        close = QPushButton(t("Close"))
         close.clicked.connect(self.reject)
 
         layout = QVBoxLayout(self)
@@ -422,15 +410,14 @@ class RestoreDialog(QDialog):
     def _show_projects(self, projects):
         for p in projects:
             item = QTreeWidgetItem([
-                f"{p['title'] or 'Untitled'}   ·   {p['backups']} backups, latest {local_time(p['latest'])}",
+                f"{p['title'] or t('Untitled')}   ·   " + t("{backups}, latest {when}", backups=tn(p["backups"], "{n} backup", "{n} backups"), when=local_time(p["latest"])),
                 human_size(p["bytes"]),
             ])
             item.setData(0, Qt.ItemDataRole.UserRole, ("project", p))
             item.setChildIndicatorPolicy(QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
             self.tree.addTopLevelItem(item)
-        self.status.setText("Pick a backup to restore. It is saved as a new file; your "
-                            "current files are never overwritten." if projects
-                            else "No cloud backups yet.")
+        self.status.setText(t("Pick a backup to restore. It is saved as a new file; your current files are never overwritten.") if projects
+                            else t("No cloud backups yet."))
 
     def _load_backups(self, item):
         kind, project = item.data(0, Qt.ItemDataRole.UserRole)
@@ -460,19 +447,19 @@ class RestoreDialog(QDialog):
         if kind != "backup":
             return
         project = backup["project"]
-        title = "".join(c for c in (project["title"] or "Restored") if c not in '/\\:*?"<>|')
+        title = "".join(c for c in (project["title"] or t("Restored")) if c not in '/\\:*?"<>|')
         stamp = local_time(backup["created"]).replace(":", "")
         suggested = self.default_dir / f"{title} (restored {stamp}).candle"
-        path, _ = QFileDialog.getSaveFileName(self, "Save restored project as", str(suggested),
-                                              "Candle projects (*.candle)")
+        path, _ = QFileDialog.getSaveFileName(self, t("Save restored project as"), str(suggested),
+                                              t("Candle projects ({pattern})", pattern="*.candle"))
         if not path:
             return
         if not path.endswith(".candle"):
             path += ".candle"
         if Path(path).exists():
-            QMessageBox.warning(self, "File exists", "Choose a new file name: restoring never overwrites a file.")
+            QMessageBox.warning(self, t("File exists"), t("Choose a new file name: restoring never overwrites a file."))
             return
-        self.status.setText("Downloading…")
+        self.status.setText(t("Downloading…"))
         self.restore_btn.setEnabled(False)
 
         def done(_):
@@ -490,9 +477,9 @@ class RestoreDialog(QDialog):
         if kind != "project":
             return
         answer = QMessageBox.warning(
-            self, "Delete from cloud",
-            f"Delete all cloud backups of <b>{project['title'] or 'Untitled'}</b>?<br><br>"
-            "Files on this computer are not touched.",
+            self, t("Delete from cloud"),
+            t("Delete all cloud backups of <b>{title}</b>?", title=project["title"] or t("Untitled")) + "<br><br>" +
+            t("Files on this computer are not touched."),
             QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes,
             QMessageBox.StandardButton.Cancel)
         if answer == QMessageBox.StandardButton.Yes:
