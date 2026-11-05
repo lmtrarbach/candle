@@ -106,12 +106,20 @@ where **Delete my account…** deletes it, as described above.
 
 ## The website (candlewriter.com)
 
-The landing page at candlewriter.com can use Google Analytics to count
-visits and see which links are used (for example, which download button).
-It only does so if you choose **Accept** when it asks; choose **No thanks**
-and nothing is loaded. Your choice is kept in your browser, and **Cookie
-settings** at the bottom of the page lets you change it. Google Analytics
-isn't used in Candle, in Candle on the web, on your account page or on
+The landing page at candlewriter.com and its guides (such as the character
+questions and the KDP calculator) can use Google Analytics and Google Ads to
+count visits and see which links are used (for example, which download
+button) and which ads bring people to the site. They only do so if you choose
+**Accept** when the page asks; choose **No thanks** and nothing is loaded.
+Your choice is kept in your browser, and **Cookie settings** at the bottom of
+the page lets you change it.
+
+When you accept, Google Ads counts a download, or a click to open Candle on
+the web, as a result of the ad you came from. Candle doesn't use them for
+personalized advertising or remarketing: you aren't added to any audience
+list.
+
+Neither is used in Candle, in Candle on the web, on your account page or on
 review pages, where your writing is.
 
 ## Changes to this policy
